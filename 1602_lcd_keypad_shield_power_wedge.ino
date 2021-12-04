@@ -1,3 +1,52 @@
+/**
+ * Power wedge control using 1602 LCD keypad shield on Arduino Uno.
+ */
+
+#include "coord_interp.h"
+
+// Calibration
+
+// VIN or VREF (to angle sensor and ADC) affects analog read
+// ADC resolution (number of bits) sets max analog read value
+// Mounting angle offset to calibrated angle?
+
+#define readAngleSensorV1()  (double) analogRead(A4) / 1023.0 * 5.0
+#define readAngleSensorV2()  (double) analogRead(A5) / 1023.0 * 5.0
+
+// Separate calibration for each angle sensor...
+
+// Calibration: angle sensor 1 -- voltage to angle
+int numCalibPoints1 = 8; // match next line
+coord_t voltToAngle1[8] = 
+{
+    {0.0000, -15},
+    {0.3533, -12},
+    {0.5189, -11},
+    {3.8300,   9},
+    {4.0000,  10},
+    {4.4480,  90},
+    {4.5040, 100},
+    {5.2880, 240}
+};
+
+// Calibration: angle sensor 2 -- voltage to angle
+int numCalibPoints2 = 8; // match next line
+coord_t voltToAngle2[8] = 
+{
+    {0.0000, -15},
+    {0.4017, -12},
+    {0.5644, -11},
+    {3.8200,   9},
+    {4.0000,  10},
+    {4.4373,  90},
+    {4.4920, 100},
+    {5.2573, 240}
+};
+
+
+// ----------------------------------------------------------
+
+// TODO: Store and reference double volts or int millivolts?
 
 #include <LiquidCrystal.h>
 
@@ -30,25 +79,25 @@ void setup() {
 }
 
 void loop() {
-  int val1;                         // store value coming from analog pin
-  double data1;                     // store temperature value from conversion formula
+  // Read sensor voltage
+  double v1 = readAngleSensorV1();
+  double v2 = readAngleSensorV2();
 
-  val1 = analogRead(A4);            // read the analog in value:
-  // data1 = (double) val1 * (5/10.24); // temperature conversion formula
-  data1 = (double) val1 / 1023.0 * 5.0;
+  // Convert voltage to calibrated angle
+  double angle1 = interp(voltToAngle1, v1, numCalibPoints1);
+  double angle2 = interp(voltToAngle2, v2, numCalibPoints2);
 
-  int val2;                         // store value coming from analog pin
-  double data2;                     // store temperature value from conversion formula
+  // Convert angle to position for display
 
-  val2 = analogRead(A5);            // read the analog in value:
-  // data2 = (double) val2 * (5/10.24); // temperature conversion formula
-  data2 = (double) val2 / 1023.0 * 5.0;
+  // Choose one value from two sensors
+  // TODO: What if both sensors don't agree?
 
+  
   // Handle buttons
   KEY key = readKeyInput();
 
-  // Only update on key change?
-  // Wait for a key repeat or release timer?
+  // TODO: Only update on key change?
+  // TODO: Wait for a key repeat or release timer?
   if (key != keyState) {
     // A change
     keyState = key;
@@ -79,30 +128,49 @@ void loop() {
   if (redraw || millis() - tepTimer > 500) {  // output a temperature value per 500ms
     redraw = false;
     tepTimer = millis();
+
+    // Print V1, angle1
     lcd.setCursor(0, 0); // set the LCD cursor position
-    // print the results to the lcd
-    //lcd.print("R: ");
-    lcd.print(data1);
-    lcd.print("V");
+    lcd.print(v1);
+    lcd.print("V ");
 
+    if (abs(angle1) < 10) {
+      lcd.print(' ');
+    }
+    if (angle1 >= 0) {
+      lcd.print(' ');
+    }
+    lcd.print(angle1);
+
+
+    // Print V2, angle2
     lcd.setCursor(0, 1); // set the LCD cursor position
-    // print the results to the lcd
-    //lcd.print("R: ");
-    lcd.print(data2);
-    lcd.print("V");
+    lcd.print(v2);
+    lcd.print("V ");
 
-    // Print counter
-    lcd.setCursor(5, 0); // set the LCD cursor position
-    if (abs(counter) < 100) {
+    if (abs(angle2) < 10) {
       lcd.print(' ');
     }
-    if (abs(counter) < 10) {
+    if (angle2 >= 0) {
       lcd.print(' ');
     }
-    if (counter >= 0) {
-      lcd.print(' ');
-    }
-    lcd.print(counter);
+    lcd.print(angle2);
+
+
+//
+//    // Print counter
+//    lcd.setCursor(9, 0); // set the LCD cursor position
+//    if (abs(counter) < 100) {
+//      lcd.print(' ');
+//    }
+//    if (abs(counter) < 10) {
+//      lcd.print(' ');
+//    }
+//    if (counter >= 0) {
+//      lcd.print(' ');
+//    }
+//    lcd.print(counter);
+
 
     //  int k = analogRead(A0);            // read the analog in value:
     //  // Print k
