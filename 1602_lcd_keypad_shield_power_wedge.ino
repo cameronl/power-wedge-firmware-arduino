@@ -46,8 +46,15 @@ coord_t voltToAngle2[8] =
 #define RELAY_UP_PIN  12
 #define RELAY_DN_PIN  13
 
-double tolerance = 0.1; // +/- Volts
+double tolerance = 0.25; // +/- Volts
+// double tolerance = 0.1; // +/- Volts
 // double tolerance = 0.02; // +/- Volts
+
+double highResRangeTransition = 4.0; // V
+
+// Only applies to high-res sensor range
+double relayTurnoffDelayUp = 0.12; // V
+double relayTurnoffDelayDn = 0.07; // V
 
 // TODO Right now these are voltages, ideally use angle?
 double userSetpointLen = 11;
@@ -183,14 +190,26 @@ void loop() {
   if (controlEnable) {
     // Bang-bang control with hysteresis
     if (raising) {
-      if (input < setpoint) {
+      double stopTimeUp;
+      if (input < highResRangeTransition) {
+        stopTimeUp = relayTurnoffDelayUp;
+      } else {
+        stopTimeUp = 0.01; // V
+      }
+      if (input < setpoint - stopTimeUp) {
         // Continue
       } else {
         // Stop at setpoint
         moveStop();
       }
     } else if (lowering) {
-      if (input > setpoint) {
+      double stopTimeDn;
+      if (input < highResRangeTransition) {
+        stopTimeDn = relayTurnoffDelayDn;
+      } else {
+        stopTimeDn = 0.01; // V
+      }
+      if (input > setpoint + stopTimeDn) {
         // Continue
       } else {
         // Stop at setpoint
