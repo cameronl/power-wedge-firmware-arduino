@@ -43,6 +43,18 @@ coord_t voltToAngle2[8] =
     {5.2573, 240}
 };
 
+#define RELAY_UP_PIN  12
+#define RELAY_DN_PIN  13
+
+double tolerance = 0.1; // +/- Volts
+// double tolerance = 0.02; // +/- Volts
+
+// TODO Right now these are voltages, ideally use angle?
+double userSetpointLen = 11;
+double userSetpoints[] = {
+  4.3, 4.1, 3.9, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0, 0.8, 0.6
+};
+
 
 // ----------------------------------------------------------
 
@@ -74,8 +86,80 @@ int counter = 0;
 int oldCounter = 0;                 // for determining dirty state needing redraw
 bool redraw = true;                 // should redraw the lcd screen
 
+// For control
+bool controlEnable = false;         // Enable automatic control
+bool raising, lowering = false;
+int upCount, dnCount = 0;           // For debug: how often are the relays turning ON?
+
+double setpoint, input, output;
+double error;
+
+int userSetpointIndex = 0;
+
+void prevSetpoint() {
+  --userSetpointIndex;
+  if (userSetpointIndex < 0) {
+    userSetpointIndex = 0; // Clamp to end -- NOT rollover
+  }
+  goToUserSetpoint(userSetpointIndex);
+}
+
+void nextSetpoint() {
+  ++userSetpointIndex;
+  if (userSetpointIndex > userSetpointLen - 1) {
+    userSetpointIndex = userSetpointLen - 1; // Clamp to end -- NOT rollover
+  }
+  goToUserSetpoint(userSetpointIndex);
+}
+
+// TODO Remove this and put inline where it's used?
+void goToUserSetpoint(int index) {
+  moveStop();
+  setpoint = userSetpoints[index];
+}
+
+// Initiate movement up
+void moveRaise() {
+  // Turn ON relay
+  digitalWrite(RELAY_DN_PIN, LOW);
+  digitalWrite(RELAY_UP_PIN, HIGH);
+  raising = true;
+  lowering = false;
+  ++upCount;
+}
+
+// Initiate movement down
+void moveLower() {
+  // Turn ON relay
+  digitalWrite(RELAY_UP_PIN, LOW);
+  digitalWrite(RELAY_DN_PIN, HIGH);
+  raising = false;
+  lowering = true;
+  ++dnCount;
+}
+
+void moveStop() {
+  // Turn OFF relays
+  digitalWrite(RELAY_UP_PIN, LOW);
+  digitalWrite(RELAY_DN_PIN, LOW);
+  raising = false;
+  lowering = false;
+}
+
 void setup() {
   lcd.begin(16, 2); // start the library
+
+  // Relay control pins
+  digitalWrite(RELAY_UP_PIN, LOW);
+  digitalWrite(RELAY_DN_PIN, LOW);
+  pinMode(RELAY_UP_PIN, OUTPUT);
+  pinMode(RELAY_DN_PIN, OUTPUT);
+  // moveStop();
+
+  // TODO What if MCU reboots? Don't want setpoint to jump. Store/load it from flash.
+  //setpoint = 3.500; // V
+  goToUserSetpoint(userSetpointIndex);
+  controlEnable = true;
 }
 
 void loop() {
@@ -91,8 +175,42 @@ void loop() {
 
   // Choose one value from two sensors
   // TODO: What if both sensors don't agree?
+  input = v1;
 
-  
+  // -------------------------------------------------------------
+  // Control
+  if (controlEnable) {
+    // Bang-bang control with hysteresis
+    if (raising) {
+      if (input < setpoint) {
+        // Continue
+      } else {
+        // Stop at setpoint
+        moveStop();
+      }
+    } else if (lowering) {
+      if (input > setpoint) {
+        // Continue
+      } else {
+        // Stop at setpoint
+        moveStop();
+      }
+    } else {
+      // TODO: Correct sign?
+      error = input - setpoint;
+      // Only move if error > tolerance
+      if (abs(error) > tolerance) {
+        if (error > 0) {
+          moveLower();
+        } else {
+          moveRaise();
+        }
+      }
+      // Do nothing. We're within tolerance of setpoint.
+    }
+  }
+  // -------------------------------------------------------------
+
   // Handle buttons
   KEY key = readKeyInput();
 
@@ -106,15 +224,17 @@ void loop() {
     if (key == KEY_NONE) {
       // Do nothing
     } else if (key == KEY_SELECT) {
-      counter = 0;
+      // counter = 0;
     } else if (key == KEY_LEFT) {
-      counter = counter * 2;
+      // counter = counter * 2;
     } else if (key == KEY_DOWN) {
-      counter--;
+      // counter--;
+      prevSetpoint();
     } else if (key == KEY_UP) {
-      counter++;
+      // counter++;
+      nextSetpoint();
     } else if (key == KEY_RIGHT) {
-      counter = -counter;
+      // counter = -counter;
     } else {
       // Should never happen.
     }
@@ -156,6 +276,33 @@ void loop() {
     }
     lcd.print(angle2);
 
+
+    // Print relay counters
+    lcd.setCursor(12, 0); // set the LCD cursor position
+    // lcd.print("u:");
+    if (abs(upCount) < 100) {
+      lcd.print(' ');
+    }
+    if (abs(upCount) < 10) {
+      lcd.print(' ');
+    }
+    if (upCount >= 0) {
+      lcd.print(' ');
+    }
+    lcd.print(upCount);
+
+    lcd.setCursor(12, 1); // set the LCD cursor position
+    // lcd.print(" d:");
+    if (abs(dnCount) < 100) {
+      lcd.print(' ');
+    }
+    if (abs(dnCount) < 10) {
+      lcd.print(' ');
+    }
+    if (dnCount >= 0) {
+      lcd.print(' ');
+    }
+    lcd.print(dnCount);
 
 //
 //    // Print counter
