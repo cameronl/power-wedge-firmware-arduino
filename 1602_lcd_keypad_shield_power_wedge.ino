@@ -57,10 +57,14 @@ double relayTurnoffDelayUp = 0.12; // V
 double relayTurnoffDelayDn = 0.07; // V
 
 // TODO Right now these are voltages, ideally use angle?
-double userSetpointLen = 11;
+double userSetpointLen = 8;
 double userSetpoints[] = {
-  4.3, 4.1, 3.9, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0, 0.8, 0.6
+  4.3, 4.0, 3.33, 2.84, 2.34, 1.68, 1.02, 0.68
 };
+//double userSetpointLen = 11;
+//double userSetpoints[] = {
+//  4.3, 4.1, 3.9, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0, 0.8, 0.6
+//};
 
 
 // ----------------------------------------------------------
