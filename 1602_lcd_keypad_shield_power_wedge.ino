@@ -89,9 +89,14 @@ KEY lastRealKey = KEY_NONE;         // set every time a key change is read (no s
 unsigned long lastRealKeyTime = 0;  // last time key changed (for debounce)
 unsigned long debounceDelay = 50;   // the debounce time; increase if the output flickers
 
-int counter = 0;
-int oldCounter = 0;                 // for determining dirty state needing redraw
+//int counter = 0;
+//int oldCounter = 0;                 // for determining dirty state needing redraw
 bool redraw = true;                 // should redraw the lcd screen
+
+// For debug
+unsigned long loopCount = 0;
+int screens = 2;
+int screen = 0;
 
 // For control
 bool controlEnable = false;         // Enable automatic control
@@ -171,6 +176,8 @@ void setup() {
 }
 
 void loop() {
+  ++loopCount;
+  
   // Read sensor voltage
   double v1 = readAngleSensorV1();
   double v2 = readAngleSensorV2();
@@ -247,6 +254,12 @@ void loop() {
       // counter = 0;
     } else if (key == KEY_LEFT) {
       // counter = counter * 2;
+      --screen;
+      if (screen < 0) {
+        screen = screens - 1; // wrap around
+      }
+      lcd.clear();
+      redraw = true;
     } else if (key == KEY_DOWN) {
       // counter--;
       prevSetpoint();
@@ -255,20 +268,33 @@ void loop() {
       nextSetpoint();
     } else if (key == KEY_RIGHT) {
       // counter = -counter;
+      ++screen;
+      if (screen > screens - 1) {
+        screen = 0; // wrap around
+      }
+      lcd.clear();
+      redraw = true;
     } else {
       // Should never happen.
     }
 
-    if (counter != oldCounter) {
-      redraw = true;
-      oldCounter = counter;
-    }
+    //if (counter != oldCounter) {
+    //  redraw = true;
+    //  oldCounter = counter;
+    //}
   }
 
-  if (redraw || millis() - tepTimer > 500) {  // output a temperature value per 500ms
+  if (redraw || millis() - tepTimer > 500) {
+    // For debug, calc stepTime
+    unsigned long tick = millis() - tepTimer;
+    //int stepTime = tick/loopCount;
+    int stepTime = loopCount;
+    loopCount = 0;
+    
     redraw = false;
     tepTimer = millis();
 
+    if (screen == 0) {
     // Print V1, angle1
     lcd.setCursor(0, 0); // set the LCD cursor position
     lcd.print(v1);
@@ -359,6 +385,25 @@ void loop() {
     //    }
     //    lcd.print(k);
     //  }
+    } else if (screen == 1) {
+      // Print stepTime
+      lcd.setCursor(9, 0); // set the LCD cursor position
+      if (abs(stepTime) < 100) {
+        lcd.print(' ');
+      }
+      if (abs(stepTime) < 10) {
+        lcd.print(' ');
+      }
+      //if (stepTime >= 0) {
+      //  lcd.print(' ');
+      //}
+      lcd.print(stepTime);
+      //lcd.print("ms");
+      lcd.print(" stp");
+    } else {
+      lcd.setCursor(0, 0); // set the LCD cursor position
+      lcd.print("Unknown screen.");
+    }
   }
 }
 
