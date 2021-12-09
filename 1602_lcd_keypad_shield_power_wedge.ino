@@ -102,8 +102,12 @@ unsigned long loopCount = 0;
 int screens = 2;
 int screen = 0;
 
+// Possible error flags
+#define ERR_BAD_SENSOR    0b10000000 // Angle sensor out of valid range. Check sensor connection, power.
+
 // For control
 bool controlEnable = false;         // Enable automatic control
+uint8_t errorFlags = 0;             // Errors which inhibit control
 bool raising, lowering = false;
 int upCount, dnCount = 0;           // For debug: how often are the relays turning ON?
 
@@ -196,9 +200,25 @@ void loop() {
   // TODO: What if both sensors don't agree?
   input = v1;
 
+  // TODO If control by angle instead of voltage, include angle in check.
+  // Sanity check input
+  if (input < 0.50 || input > 4.50) {
+    // Angle sensor out of valid range
+    // Check sensor connection, power.
+    moveStop();
+    // Set error flag
+    errorFlags |= ERR_BAD_SENSOR;
+    // Log this? Count? Sum time in error? Display message?
+    // TODO: Should only call moveStop() if err flag not already set?
+  } else {
+    // Clear error automatically
+    // TODO: Log this? Count? Sum time in error? Display message?
+    errorFlags &= ~ERR_BAD_SENSOR;
+  }
+
   // -------------------------------------------------------------
   // Control
-  if (controlEnable) {
+  if (controlEnable && errorFlags == 0) {
     // Bang-bang control with hysteresis
     if (raising) {
       double stopTimeUp;
@@ -290,13 +310,25 @@ void loop() {
 
   if (redraw || millis() - tepTimer > 500) {
     // For debug, calc stepTime
-    unsigned long tick = millis() - tepTimer;
+    //unsigned long tick = millis() - tepTimer;
     //int stepTime = tick/loopCount;
     int stepTime = loopCount;
     loopCount = 0;
     
     redraw = false;
     tepTimer = millis();
+
+    // Pop up errors -- separate from normal screens below.
+    if (errorFlags != 0) {
+      lcd.clear();
+      lcd.setCursor(0, 0); // set the LCD cursor position
+      // If we use the whole screen, only show 1 error
+      // Could do 1 per line, etc..
+      if ((errorFlags & ERR_BAD_SENSOR) > 0) {
+        lcd.print("Err Bad Sensor.");
+      }
+      return; // Don't draw screens below
+    }
 
     if (screen == 0) {
     // Print V1, angle1
