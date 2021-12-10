@@ -66,6 +66,7 @@ double userSetpoints[] = {
 //  4.3, 4.1, 3.9, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0, 0.8, 0.6
 //};
 
+unsigned long maxRelayOnTime = 10000; // milliseconds
 
 // ----------------------------------------------------------
 
@@ -104,12 +105,14 @@ int screen = 0;
 
 // Possible error flags
 #define ERR_BAD_SENSOR    0b10000000 // Angle sensor out of valid range. Check sensor connection, power.
+#define ERR_RELAY_ON_LONG 0b00000001 // Relay has been ON too long.
 
 // For control
 bool controlEnable = false;         // Enable automatic control
 uint8_t errorFlags = 0;             // Errors which inhibit control
 bool raising, lowering = false;
 int upCount, dnCount = 0;           // For debug: how often are the relays turning ON?
+unsigned long lastRelayStart = 0;   // last time a relay turned ON
 
 double setpoint, input, output;
 double error;
@@ -147,6 +150,7 @@ void moveRaise() {
   raising = true;
   lowering = false;
   ++upCount;
+  lastRelayStart = millis();
 }
 
 // Initiate movement down
@@ -157,6 +161,7 @@ void moveLower() {
   raising = false;
   lowering = true;
   ++dnCount;
+  lastRelayStart = millis();
 }
 
 void moveStop() {
@@ -214,6 +219,13 @@ void loop() {
     // Clear error automatically
     // TODO: Log this? Count? Sum time in error? Display message?
     errorFlags &= ~ERR_BAD_SENSOR;
+  }
+
+  // Check relay ON too long
+  if ((raising || lowering) && millis() - lastRelayStart > maxRelayOnTime) {
+    moveStop();
+    errorFlags |= ERR_RELAY_ON_LONG;   // Set error flag
+    // TODO: When should we clear this error and try again?
   }
 
   // -------------------------------------------------------------
@@ -326,6 +338,10 @@ void loop() {
       // Could do 1 per line, etc..
       if ((errorFlags & ERR_BAD_SENSOR) > 0) {
         lcd.print("Err Bad Sensor.");
+      } else if ((errorFlags & ERR_RELAY_ON_LONG) > 0) {
+        lcd.print("Err Relay On");
+        lcd.setCursor(0, 1); // set the LCD cursor position
+        lcd.print("    Too Long");
       }
       return; // Don't draw screens below
     }
