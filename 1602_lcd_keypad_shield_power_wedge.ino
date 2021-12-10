@@ -67,6 +67,8 @@ double userSetpoints[] = {
 //};
 
 unsigned long maxRelayOnTime = 10000; // milliseconds
+unsigned long maxRelayCyclesPer  = 6;
+unsigned long maxRelayCyclesTime = 2000; // milliseconds
 
 // ----------------------------------------------------------
 
@@ -105,14 +107,20 @@ int screen = 0;
 
 // Possible error flags
 #define ERR_BAD_SENSOR    0b10000000 // Angle sensor out of valid range. Check sensor connection, power.
+#define ERR_RELAY_CYCLING 0b00000010 // Relay cycling ON/OFF too much. Control unstable around setpoint.
 #define ERR_RELAY_ON_LONG 0b00000001 // Relay has been ON too long.
 
 // For control
 bool controlEnable = false;         // Enable automatic control
 uint8_t errorFlags = 0;             // Errors which inhibit control
 bool raising, lowering = false;
-int upCount, dnCount = 0;           // For debug: how often are the relays turning ON?
+
+// For checking relay cycling too frequently or on too long
 unsigned long lastRelayStart = 0;   // last time a relay turned ON
+uint16_t upCount, dnCount = 0;      // For debug: how often are the relays turning ON?
+uint16_t relayCount = 0;
+uint16_t lastRelayCount = 0;
+unsigned long relayCycleTimer = 0;  // last check of relay cycling
 
 double setpoint, input, output;
 double error;
@@ -228,6 +236,24 @@ void loop() {
     // TODO: When should we clear this error and try again?
   }
 
+  // Check relay cycling on/off too much
+  if (millis() - relayCycleTimer > maxRelayCyclesTime) {
+    relayCycleTimer = millis();
+    relayCount = upCount + dnCount;
+    if (relayCount - lastRelayCount > maxRelayCyclesPer) {
+      // Relay(s) cycling to frequently.
+      // Control position not settling on setpoint?
+      // Too much overshoot of setpoint on each movement?
+      // Try increasing tolerance around setpoint.
+      moveStop();
+      errorFlags |= ERR_RELAY_CYCLING;   // Set error flag
+      // TODO Any logging?
+      //      Store relayCount diff that caused the error somewhere?
+      // TODO When to reset/clear this error?
+    }
+    lastRelayCount = relayCount;
+  }
+
   // -------------------------------------------------------------
   // Control
   if (controlEnable && errorFlags == 0) {
@@ -338,6 +364,10 @@ void loop() {
       // Could do 1 per line, etc..
       if ((errorFlags & ERR_BAD_SENSOR) > 0) {
         lcd.print("Err Bad Sensor.");
+      } else if ((errorFlags & ERR_RELAY_CYCLING) > 0) {
+        lcd.print("Err Relays");
+        lcd.setCursor(0, 1); // set the LCD cursor position
+        lcd.print("Cycling On/Off");
       } else if ((errorFlags & ERR_RELAY_ON_LONG) > 0) {
         lcd.print("Err Relay On");
         lcd.setCursor(0, 1); // set the LCD cursor position
