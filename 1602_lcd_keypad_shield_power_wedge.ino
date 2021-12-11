@@ -96,14 +96,12 @@ KEY lastRealKey = KEY_NONE;         // set every time a key change is read (no s
 unsigned long lastRealKeyTime = 0;  // last time key changed (for debounce)
 unsigned long debounceDelay = 50;   // the debounce time; increase if the output flickers
 
-//int counter = 0;
-//int oldCounter = 0;                 // for determining dirty state needing redraw
 bool redraw = true;                 // should redraw the lcd screen
+int screens = 2;
+int screen = 0;
 
 // For debug
 unsigned long loopCount = 0;
-int screens = 2;
-int screen = 0;
 
 // Possible error flags
 #define ERR_BAD_SENSOR    0b10000000 // Angle sensor out of valid range. Check sensor connection, power.
@@ -219,8 +217,7 @@ void loop() {
     // Angle sensor out of valid range
     // Check sensor connection, power.
     moveStop();
-    // Set error flag
-    errorFlags |= ERR_BAD_SENSOR;
+    errorFlags |= ERR_BAD_SENSOR;      // Set error flag
     // Log this? Count? Sum time in error? Display message?
     // TODO: Should only call moveStop() if err flag not already set?
   } else {
@@ -313,9 +310,7 @@ void loop() {
     if (key == KEY_NONE) {
       // Do nothing
     } else if (key == KEY_SELECT) {
-      // counter = 0;
     } else if (key == KEY_LEFT) {
-      // counter = counter * 2;
       --screen;
       if (screen < 0) {
         screen = screens - 1; // wrap around
@@ -323,13 +318,10 @@ void loop() {
       lcd.clear();
       redraw = true;
     } else if (key == KEY_DOWN) {
-      // counter--;
       prevSetpoint();
     } else if (key == KEY_UP) {
-      // counter++;
       nextSetpoint();
     } else if (key == KEY_RIGHT) {
-      // counter = -counter;
       ++screen;
       if (screen > screens - 1) {
         screen = 0; // wrap around
@@ -339,17 +331,10 @@ void loop() {
     } else {
       // Should never happen.
     }
-
-    //if (counter != oldCounter) {
-    //  redraw = true;
-    //  oldCounter = counter;
-    //}
   }
 
   if (redraw || millis() - tepTimer > 500) {
     // For debug, calc stepTime
-    //unsigned long tick = millis() - tepTimer;
-    //int stepTime = tick/loopCount;
     int stepTime = loopCount;
     loopCount = 0;
     
@@ -377,96 +362,81 @@ void loop() {
     }
 
     if (screen == 0) {
-    // Print V1, angle1
-    lcd.setCursor(0, 0); // set the LCD cursor position
-    lcd.print(v1);
-    lcd.print("V ");
+      // Print V1, angle1
+      lcd.setCursor(0, 0); // set the LCD cursor position
+      lcd.print(v1);
+      lcd.print("V ");
 
-    if (abs(angle1) < 10) {
-      lcd.print(' ');
-    }
-    if (angle1 >= 0) {
-      lcd.print(' ');
-    }
-    lcd.print(angle1);
-
-
-    // Print V2, angle2
-    lcd.setCursor(0, 1); // set the LCD cursor position
-    lcd.print(v2);
-    lcd.print("V ");
-
-    if (abs(angle2) < 10) {
-      lcd.print(' ');
-    }
-    if (angle2 >= 0) {
-      lcd.print(' ');
-    }
-    lcd.print(angle2);
+      if (abs(angle1) < 10) {
+        lcd.print(' ');
+      }
+      if (angle1 >= 0) {
+        lcd.print(' ');
+      }
+      lcd.print(angle1);
 
 
-    // Print relay counters
-    lcd.setCursor(12, 0); // set the LCD cursor position
-    // lcd.print("u:");
-    if (abs(upCount) < 100) {
-      lcd.print(' ');
-    }
-    if (abs(upCount) < 10) {
-      lcd.print(' ');
-    }
-    if (upCount >= 0) {
-      lcd.print(' ');
-    }
-    lcd.print(upCount);
+      // Print V2, angle2
+      lcd.setCursor(0, 1); // set the LCD cursor position
+      lcd.print(v2);
+      lcd.print("V ");
 
-    lcd.setCursor(12, 1); // set the LCD cursor position
-    // lcd.print(" d:");
-    if (abs(dnCount) < 100) {
-      lcd.print(' ');
-    }
-    if (abs(dnCount) < 10) {
-      lcd.print(' ');
-    }
-    if (dnCount >= 0) {
-      lcd.print(' ');
-    }
-    lcd.print(dnCount);
-
-//
-//    // Print counter
-//    lcd.setCursor(9, 0); // set the LCD cursor position
-//    if (abs(counter) < 100) {
-//      lcd.print(' ');
-//    }
-//    if (abs(counter) < 10) {
-//      lcd.print(' ');
-//    }
-//    if (counter >= 0) {
-//      lcd.print(' ');
-//    }
-//    lcd.print(counter);
+      if (abs(angle2) < 10) {
+        lcd.print(' ');
+      }
+      if (angle2 >= 0) {
+        lcd.print(' ');
+      }
+      lcd.print(angle2);
 
 
-    //  int k = analogRead(A0);            // read the analog in value:
-    //  // Print k
-    //  lcd.setCursor(7, 1); // set the LCD cursor position
-    //  if (abs(k) > 9999) {
-    //    lcd.print('_____');
-    //  } else {
-    //    if (abs(k) < 1000) {
-    //      lcd.print(' ');
-    //    }
-    //    if (abs(k) < 100) {
-    //      lcd.print(' ');
-    //    }
-    //    if (abs(k) < 10) {
-    //      lcd.print(' ');
-    //    }
-    //    if (k >= 0) {
-    //      lcd.print(' ');
-    //    }
-    //    lcd.print(k);
-    //  }
+      // Print relay counters
+      lcd.setCursor(12, 0); // set the LCD cursor position
+      // lcd.print("u:");
+      if (abs(upCount) < 100) {
+        lcd.print(' ');
+      }
+      if (abs(upCount) < 10) {
+        lcd.print(' ');
+      }
+      if (upCount >= 0) {
+        lcd.print(' ');
+      }
+      lcd.print(upCount);
+
+      lcd.setCursor(12, 1); // set the LCD cursor position
+      // lcd.print(" d:");
+      if (abs(dnCount) < 100) {
+        lcd.print(' ');
+      }
+      if (abs(dnCount) < 10) {
+        lcd.print(' ');
+      }
+      if (dnCount >= 0) {
+        lcd.print(' ');
+      }
+      lcd.print(dnCount);
+
+      //  int k = analogRead(A0);            // read the analog in value:
+      //  // Print k
+      //  lcd.setCursor(7, 1); // set the LCD cursor position
+      //  if (abs(k) > 9999) {
+      //    lcd.print('_____');
+      //  } else {
+      //    if (abs(k) < 1000) {
+      //      lcd.print(' ');
+      //    }
+      //    if (abs(k) < 100) {
+      //      lcd.print(' ');
+      //    }
+      //    if (abs(k) < 10) {
+      //      lcd.print(' ');
+      //    }
+      //    if (k >= 0) {
+      //      lcd.print(' ');
+      //    }
+      //    lcd.print(k);
+      //  }
     } else if (screen == 1) {
       // Print stepTime
       lcd.setCursor(9, 0); // set the LCD cursor position
