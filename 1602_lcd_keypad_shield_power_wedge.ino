@@ -70,10 +70,14 @@ unsigned long maxRelayOnTime = 10000; // milliseconds
 unsigned long maxRelayCyclesPer  = 6;
 unsigned long maxRelayCyclesTime = 2000; // milliseconds
 
+#define setpointEepromAddr  999     // Where to store selected set point. Read on reboot.
+                                    // 0-1023 on Arduino Uno
+
 // ----------------------------------------------------------
 
 // TODO: Store and reference double volts or int millivolts?
 
+#include <EEPROM.h>
 #include <LiquidCrystal.h>
 
 LiquidCrystal lcd(8, 9, 4, 5, 6, 7); // select the pins used on the LCD panel
@@ -123,7 +127,7 @@ unsigned long relayCycleTimer = 0;  // last check of relay cycling
 double setpoint, input, output;
 double error;
 
-int userSetpointIndex = 0;
+int userSetpointIndex;              // Current position in list of user setpoints
 
 void prevSetpoint() {
   --userSetpointIndex;
@@ -141,11 +145,11 @@ void nextSetpoint() {
   goToUserSetpoint(userSetpointIndex);
 }
 
-// TODO Remove this and put inline where it's used?
 void goToUserSetpoint(int index) {
   // TODO Don't stop if we're already moving in the right direction.
   moveStop();
   setpoint = userSetpoints[index];
+  EEPROM.update(setpointEepromAddr, index & 0xFF);
 }
 
 // Initiate movement up
@@ -188,7 +192,13 @@ void setup() {
   pinMode(RELAY_DN_PIN, OUTPUT);
   // moveStop();
 
-  // TODO What if MCU reboots? Don't want setpoint to jump. Store/load it from flash.
+  // What if MCU reboots? Don't want setpoint to jump. Store/load it from flash.
+  // Currently storing index in list of user setpoints -- NOT the actual angle/voltage.
+  userSetpointIndex = EEPROM.read(setpointEepromAddr);
+  if (userSetpointIndex > userSetpointLen - 1) {
+    userSetpointIndex = 0; // Home is probably best place to start if uninitialized.
+  }
+
   //setpoint = 3.500; // V
   goToUserSetpoint(userSetpointIndex);
   controlEnable = true;
