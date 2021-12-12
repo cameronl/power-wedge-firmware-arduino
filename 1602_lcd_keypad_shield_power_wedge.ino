@@ -119,7 +119,7 @@ bool raising, lowering = false;
 
 // For checking relay cycling too frequently or on too long
 unsigned long lastRelayStart = 0;   // last time a relay turned ON
-uint16_t upCount, dnCount = 0;      // For debug: how often are the relays turning ON?
+uint16_t upCount, dnCount = 0;      // how often are the relays turning ON?
 uint16_t relayCount = 0;
 uint16_t lastRelayCount = 0;
 unsigned long relayCycleTimer = 0;  // last check of relay cycling
@@ -149,6 +149,7 @@ void goToUserSetpoint(int index) {
   // TODO Don't stop if we're already moving in the right direction.
   moveStop();
   setpoint = userSetpoints[index];
+  // TODO Sanity check setpoint
   EEPROM.update(setpointEepromAddr, index & 0xFF);
 }
 
@@ -210,6 +211,8 @@ void loop() {
   // Read sensor voltage
   double v1 = readAngleSensorV1();
   double v2 = readAngleSensorV2();
+
+  // TODO Handle noise
 
   // Convert voltage to calibrated angle
   double angle1 = interp(voltToAngle1, v1, numCalibPoints1);

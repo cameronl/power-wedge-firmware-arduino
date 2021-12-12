@@ -1,0 +1,81 @@
+
+Drive speed (degrees/ms)?
+Noise on analog read?
+ - Low pass filter (passive or active)
+ - Analog front end?
+ - VREF
+ - Keep analog ground away from relay ground
+ms per loop?
+Shielding?
+Log of relay cycles
+ - Up relay cycle count
+ - Dn relay cycle count
+ - time on?
+Settled duration: Time between relay activations.
+Delay between opposite relay on (to ensure both not on at the same time).
+Prohibit both relays on at the same time.
+ - Software vs hardware?
+Can both relays be on at the same time with slow relay turn off?
+What exactly happens with both relays on at the same time?
+ - Nothing?
+ - Battery short?
+ - High current?
+MCU pins high during reset/setup? Don't want (esp. both) relay pins high during bootup.
+Log of PID output
+Command response duration: Time between setpoint change and settled start.
+Drive duration: Sum of time while relay on
+ - Up relay
+ - Dn relay
+12V battery monitor
+ - Voltage
+ - Current?
+Rates
+ - Movement rate: degrees/ms
+   - There is a delay after relay turn on.
+ - Relay cycle rate: count/s
+Detect no movement?
+ - At limit
+Movement rate vs. expected rate?
+Minimum relay on time?
+ - Relays take time to turn on/off. Don't try to move again if relay recently turned off.
+ - Can we detect when a relay turned off after a turn on?
+
+Debug:
+ - Go to calibrated angle.
+ - Go to angle sensor voltage.
+
+Do we care how often relay is switched?
+Is changing direction worse? Delay?
+
+Bang–bang control (not PID)
+
+Control assumptions for this relay-controlled hydraulic power wedge:
+1. No speed control (relay is only ON/OFF).
+1. No overshoot due to inertia (hydraulic damps instantaneously).
+1. No error due to disturbances (hydraulic will hold position).
+1. Very little delay in measurement.
+
+Issues (more assumptions to think about):
+1. Sensor noise should be low because sensor has high resolution in the important range.
+1. We do care how often the relay is switched.
+1. Relays probably have a minimum on time before any output is seen in angle sensor.
+1. Seems to have some overshoot from relay turn off time?
+   - Is it consistent?
+   - Same in each direction?
+   - In high-res (10 deg) range: 0.12V raising, 0.07V lowering.. More (0.20V) at -10 deg end of range!
+
+If angle sensor power input changes, it's output changes wildly so the power wedge goes crazy. Handle this!! *
+ - Would help to have control enable have sensor power good as a dependency (required input).
+ - No sensor power good, no control. <**
+ - **** Next level: Control requires sensor output within range min/max 0.5 - 4.5V. 0V = no control, 5V = no control. ****
+ - Error: Sensor bad (sensor reading out of range. No control).
+ - Log/count these occurances.
+ - Tightly couple/shield/protect sensor power, sensor valid, MCU, control enable, setpoint.
+What happens if sensor is disconnected? Do we need a weak pull up/down to detect (and error) sensor disconnected?
+ - Each pin: power, read, ground?
+Error: sensor value fluctuations (changed too quickly?)
+
+Error: Relay on too long. No control.
+ - Max vs. typical?
+Error: High relay cycles. No control.
+
