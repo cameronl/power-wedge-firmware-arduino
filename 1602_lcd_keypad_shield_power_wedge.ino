@@ -46,26 +46,19 @@ coord_t voltToAngle2[8] =
 #define RELAY_UP_PIN  12
 #define RELAY_DN_PIN  13
 
-double tolerance = 0.25; // +/- Volts
-// double tolerance = 0.1; // +/- Volts
-// double tolerance = 0.02; // +/- Volts
+double tolerance = 1.0; // +/- angle (degrees)
 
-double highResRangeTransition = 4.0; // V
+// Additional angle (overshoot) due to relay turn off delay, etc.
+double stopTimeUp = 0.7; // angle (degrees)
+double stopTimeDn = 0.7; // angle (degrees)
 
-// Only applies to high-res sensor range
-double relayTurnoffDelayUp = 0.12; // V
-double relayTurnoffDelayDn = 0.07; // V
-
-// TODO Right now these are voltages, ideally use angle?
+// List of user selectable set points
 double userSetpointLen = 8;
 double userSetpoints[] = {
-  4.3, 4.0, 3.33, 2.84, 2.34, 1.68, 1.02, 0.68
+  90, 10, 6, 3, 0, -4, -8, -10  // angle (degrees)
 };
-//double userSetpointLen = 11;
-//double userSetpoints[] = {
-//  4.3, 4.1, 3.9, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0, 0.8, 0.6
-//};
 
+// Error limits
 unsigned long maxRelayOnTime = 10000; // milliseconds
 unsigned long maxRelayCyclesPer  = 6;
 unsigned long maxRelayCyclesTime = 2000; // milliseconds
@@ -214,19 +207,10 @@ void loop() {
 
   // TODO Handle noise
 
-  // Convert voltage to calibrated angle
-  double angle1 = interp(voltToAngle1, v1, numCalibPoints1);
-  double angle2 = interp(voltToAngle2, v2, numCalibPoints2);
-
-  // Convert angle to position for display
-
-  // Choose one value from two sensors
-  // TODO: What if both sensors don't agree?
-  input = v1;
-
-  // TODO If control by angle instead of voltage, include angle in check.
+  // TODO If control by angle instead of voltage, include angle in check?
+  // TODO Separate error flag for each angle sensor?
   // Sanity check input
-  if (input < 0.50 || input > 4.50) {
+  if (v1 < 0.50 || v1 > 4.50 || v2 < 0.50 || v2 > 4.50) {
     // Angle sensor out of valid range
     // Check sensor connection, power.
     moveStop();
@@ -238,6 +222,17 @@ void loop() {
     // TODO: Log this? Count? Sum time in error? Display message?
     errorFlags &= ~ERR_BAD_SENSOR;
   }
+
+  // Convert voltage to calibrated angle
+  double angle1 = interp(voltToAngle1, v1, numCalibPoints1);
+  double angle2 = interp(voltToAngle2, v2, numCalibPoints2);
+
+  // Convert angle to position for display
+
+  // Choose one value from two sensors
+  // TODO: What if both sensors don't agree?
+  //input = (angle1 + angle2)/2.0;
+  input = angle1;
 
   // Check relay ON too long
   if ((raising || lowering) && millis() - lastRelayStart > maxRelayOnTime) {
@@ -269,12 +264,6 @@ void loop() {
   if (controlEnable && errorFlags == 0) {
     // Bang-bang control with hysteresis
     if (raising) {
-      double stopTimeUp;
-      if (input < highResRangeTransition) {
-        stopTimeUp = relayTurnoffDelayUp;
-      } else {
-        stopTimeUp = 0.01; // V
-      }
       if (input < setpoint - stopTimeUp) {
         // Continue
       } else {
@@ -282,12 +271,6 @@ void loop() {
         moveStop();
       }
     } else if (lowering) {
-      double stopTimeDn;
-      if (input < highResRangeTransition) {
-        stopTimeDn = relayTurnoffDelayDn;
-      } else {
-        stopTimeDn = 0.01; // V
-      }
       if (input > setpoint + stopTimeDn) {
         // Continue
       } else {
