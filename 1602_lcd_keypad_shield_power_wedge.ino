@@ -94,7 +94,7 @@ unsigned long lastRealKeyTime = 0;  // last time key changed (for debounce)
 unsigned long debounceDelay = 50;   // the debounce time; increase if the output flickers
 
 bool redraw = true;                 // should redraw the lcd screen
-int screens = 2;
+int screens = 3;
 int screen = 0;
 
 // For debug
@@ -261,6 +261,7 @@ void loop() {
 
   // -------------------------------------------------------------
   // Control
+  error = input - setpoint;
   if (controlEnable && errorFlags == 0) {
     // Bang-bang control with hysteresis
     if (raising) {
@@ -278,8 +279,6 @@ void loop() {
         moveStop();
       }
     } else {
-      // TODO: Correct sign?
-      error = input - setpoint;
       // Only move if error > tolerance
       if (abs(error) > tolerance) {
         if (error > 0) {
@@ -434,6 +433,59 @@ void loop() {
       //    lcd.print(k);
       //  }
     } else if (screen == 1) {
+      // Print setpoint
+      lcd.setCursor(0, 0); // set the LCD cursor position
+      lcd.print("S");
+      if (abs(setpoint) < 100) {
+        lcd.print(' ');
+      }
+      if (abs(setpoint) < 10) {
+        lcd.print(' ');
+      }
+      if (setpoint >= 0) {
+       lcd.print(' ');
+      }
+      lcd.print(setpoint);
+      // Print error
+      // lcd.setCursor(0, 0); // set the LCD cursor position
+      if (abs(error) < 100) {
+        lcd.print(' ');
+      }
+      if (abs(error) < 10) {
+        lcd.print(' ');
+      }
+      if (error >= 0) {
+       lcd.print(' ');
+      }
+      lcd.print(error);
+      lcd.print("E");
+      // Print input
+      lcd.setCursor(0, 1); // set the LCD cursor position
+      lcd.print("I");
+      if (abs(input) < 100) {
+        lcd.print(' ');
+      }
+      if (abs(input) < 10) {
+        lcd.print(' ');
+      }
+      if (input >= 0) {
+       lcd.print(' ');
+      }
+      lcd.print(input);
+      // Print tolerance
+      // lcd.setCursor(0, 0); // set the LCD cursor position
+      if (abs(tolerance) < 100) {
+        lcd.print(' ');
+      }
+      if (abs(tolerance) < 10) {
+        lcd.print(' ');
+      }
+      if (tolerance >= 0) {
+       lcd.print(' ');
+      }
+      lcd.print(tolerance);
+      lcd.print("T");
+    } else if (screen == 2) {
       // Print stepTime
       lcd.setCursor(9, 0); // set the LCD cursor position
       if (abs(stepTime) < 100) {
