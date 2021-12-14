@@ -219,7 +219,8 @@ void loop() {
   // TODO If control by angle instead of voltage, include angle in check?
   // TODO Separate error flag for each angle sensor?
   // Sanity check input
-  if (v1 < 0.50 || v1 > 4.50 || v2 < 0.50 || v2 > 4.50) {
+  // Don't use this to limit movement (use maxSetpoint or something else).
+  if (v1 < 0.30 || v1 > 4.70 || v2 < 0.30 || v2 > 4.65) {
     // Angle sensor out of valid range
     // Check sensor connection, power.
     moveStop();
