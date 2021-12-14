@@ -58,7 +58,9 @@ double userSetpoints[] = {
   90, 10, 6, 3, 0, -4, -8, -10  // angle (degrees)
 };
 
-// Error limits
+// Safety / Error limits
+double maxSetpoint = 91.0;          // angle (degrees)
+double minSetpoint = -11.0;         // angle (degrees)
 unsigned long maxRelayOnTime = 10000; // milliseconds
 unsigned long maxRelayCyclesPer  = 6;
 unsigned long maxRelayCyclesTime = 2000; // milliseconds
@@ -142,7 +144,14 @@ void goToUserSetpoint(int index) {
   // TODO Don't stop if we're already moving in the right direction.
   moveStop();
   setpoint = userSetpoints[index];
-  // TODO Sanity check setpoint
+  // Limit setpoint min/max safe angle
+  if (setpoint > maxSetpoint) {
+    setpoint = maxSetpoint;
+  }
+  if (setpoint < minSetpoint) {
+    setpoint = minSetpoint;
+  }
+  // TODO Further sanity check setpoint results in valid voltage?
   EEPROM.update(setpointEepromAddr, index & 0xFF);
 }
 
