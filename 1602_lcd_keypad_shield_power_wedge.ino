@@ -46,7 +46,8 @@ coord_t voltToAngle2[8] =
 #define RELAY_UP_PIN  12
 #define RELAY_DN_PIN  13
 
-double tolerance = 1.0; // +/- angle (degrees)
+double toleranceHighRes = 1.0; // +/- angle (degrees)
+double toleranceLowRes = 10.0; // +/- angle (degrees)
 
 // Additional angle (overshoot) due to relay turn off delay, etc.
 double stopTimeUp = 0.7; // angle (degrees)
@@ -130,6 +131,7 @@ unsigned long relayCycleTimer = 0;  // last check of relay cycling
 
 double setpoint, input, output;
 double error;
+double tolerance;
 
 int userSetpointIndex;              // Current position in list of user setpoints
 
@@ -252,6 +254,13 @@ void loop() {
   // TODO: What if both sensors don't agree?
   //input = (angle1 + angle2)/2.0;
   input = angle1;
+
+  // Handle tolerance on two different sensor ranges
+  if (input < 17.0) {
+    tolerance = toleranceHighRes;
+  } else {
+    tolerance = toleranceLowRes;
+  }
 
   // Check relay ON too long
   if ((raising || lowering) && millis() - lastRelayStart > maxRelayOnTime) {
