@@ -68,6 +68,15 @@ unsigned long maxRelayCyclesTime = 2000; // milliseconds
 #define setpointEepromAddr  999     // Where to store selected set point. Read on reboot.
                                     // 0-1023 on Arduino Uno
 
+// Convert wedge angle to single character for display
+int angleToCharThresholdLen = 16;
+double angleToCharThreshold[] = {
+  80, 70, 60, 50, 40, 30, 20, 12, 8, 4.5, 1.5, -1.5, -6, -9, -11, -90
+};
+char angleChars[] = {
+  'F', 'E', 'd', 'c', 'b', 'A', '9', '8', '7', '6', '5', '4', '3', '2', '1', '0'
+};
+
 // ----------------------------------------------------------
 
 // TODO: Store and reference double volts or int millivolts?
@@ -96,7 +105,7 @@ unsigned long lastRealKeyTime = 0;  // last time key changed (for debounce)
 unsigned long debounceDelay = 50;   // the debounce time; increase if the output flickers
 
 bool redraw = true;                 // should redraw the lcd screen
-int screens = 3;
+int screens = 4;
 int screen = 0;
 
 // For debug
@@ -496,6 +505,11 @@ void loop() {
       lcd.print(tolerance);
       lcd.print("T");
     } else if (screen == 2) {
+      lcd.setCursor(7, 0); // set the LCD cursor position
+      lcd.print(angleToChar(setpoint));
+      lcd.print(' ');
+      lcd.print(angleToChar(input));
+    } else if (screen == 3) {
       // Print stepTime
       lcd.setCursor(9, 0); // set the LCD cursor position
       if (abs(stepTime) < 100) {
@@ -515,6 +529,15 @@ void loop() {
       lcd.print("Unknown screen.");
     }
   }
+}
+
+char angleToChar(double angle) {
+  for (int i = 0; i < angleToCharThresholdLen; ++i) {
+    if (angle > angleToCharThreshold[i]) {
+      return angleChars[i];
+    }
+  }
+  return ' ';
 }
 
 // Read keypad and handle button debounce
