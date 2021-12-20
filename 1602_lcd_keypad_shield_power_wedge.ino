@@ -127,6 +127,7 @@ bool raising, lowering = false;
 
 // For checking relay cycling too frequently or on too long
 unsigned long lastRelayStart = 0;   // last time a relay turned ON
+unsigned long lastRelayStop = 0;    // last time a relay turned OFF
 uint16_t upCount, dnCount = 0;      // how often are the relays turning ON?
 uint16_t relayCount = 0;
 uint16_t lastRelayCount = 0;
@@ -198,8 +199,7 @@ void moveStop() {
   if (raising || lowering) {
     raising = false;
     lowering = false;
-    // Delay before moving again
-    delay(delayAfterMove);
+    lastRelayStop = millis();
   }
 }
 
@@ -314,8 +314,8 @@ void loop() {
         moveStop();
       }
     } else {
-      // Only move if error > tolerance
-      if (abs(error) > tolerance) {
+      // Only move if: error > tolerance AND been long enough after a move
+      if (abs(error) > tolerance && millis() - lastRelayStop > delayAfterMove) {
         if (error > 0) {
           moveLower();
         } else {
