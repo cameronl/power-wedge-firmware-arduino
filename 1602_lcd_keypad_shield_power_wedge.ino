@@ -53,6 +53,9 @@ double toleranceLowRes = 10.0; // +/- angle (degrees)
 double stopTimeUp = 0.7; // angle (degrees)
 double stopTimeDn = 0.7; // angle (degrees)
 
+// Time to wait after movement for relay to turn off and movement to settle
+unsigned long delayAfterMove = 200; // milliseconds
+
 // List of user selectable set points
 double userSetpointLen = 8;
 double userSetpoints[] = {
@@ -192,8 +195,12 @@ void moveStop() {
   // Turn OFF relays
   digitalWrite(RELAY_UP_PIN, LOW);
   digitalWrite(RELAY_DN_PIN, LOW);
-  raising = false;
-  lowering = false;
+  if (raising || lowering) {
+    raising = false;
+    lowering = false;
+    // Delay before moving again
+    delay(delayAfterMove);
+  }
 }
 
 void setup() {
