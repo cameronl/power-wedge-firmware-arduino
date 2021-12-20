@@ -156,8 +156,6 @@ void nextSetpoint() {
 }
 
 void goToUserSetpoint(int index) {
-  // TODO Don't stop if we're already moving in the right direction.
-  moveStop();
   setpoint = userSetpoints[index];
   // Limit setpoint min/max safe angle
   if (setpoint > maxSetpoint) {
