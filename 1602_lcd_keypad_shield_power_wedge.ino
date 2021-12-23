@@ -43,8 +43,8 @@ coord_t voltToAngle2[8] =
     {5.2573, 240}
 };
 
-#define RELAY_UP_PIN  12
-#define RELAY_DN_PIN  13
+#define RELAY_UP_PIN  11
+#define RELAY_DN_PIN  12
 
 double toleranceHighRes = 1.0; // +/- angle (degrees)
 double toleranceLowRes = 10.0; // +/- angle (degrees)
