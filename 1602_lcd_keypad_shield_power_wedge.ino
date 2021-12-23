@@ -83,6 +83,8 @@ char angleChars[] = {
 
 // ----------------------------------------------------------
 
+#define ENABLE_SERIAL_LOG
+
 // TODO: Store and reference double volts or int millivolts?
 
 #include <EEPROM.h>
@@ -128,6 +130,7 @@ bool raising, lowering = false;
 // For checking relay cycling too frequently or on too long
 unsigned long lastRelayStart = 0;   // last time a relay turned ON
 unsigned long lastRelayStop = 0;    // last time a relay turned OFF
+unsigned long lastRelayStopLogged = 0; // last time a relay stop was logged
 uint16_t upCount, dnCount = 0;      // how often are the relays turning ON?
 uint16_t relayCount = 0;
 uint16_t lastRelayCount = 0;
@@ -176,6 +179,7 @@ void moveRaise() {
   raising = true;
   lowering = false;
   ++upCount;
+  logMoveStart();
   lastRelayStart = millis();
 }
 
@@ -187,6 +191,7 @@ void moveLower() {
   raising = false;
   lowering = true;
   ++dnCount;
+  logMoveStart();
   lastRelayStart = millis();
 }
 
@@ -198,10 +203,17 @@ void moveStop() {
     raising = false;
     lowering = false;
     lastRelayStop = millis();
+    logMoveStop();
   }
 }
 
 void setup() {
+#ifdef ENABLE_SERIAL_LOG
+  // Serial.begin(9600);
+  Serial.begin(115200);
+  Serial.println("Hello Computer!");
+#endif
+
   lcd.begin(16, 2); // start the library
 
   // Relay control pins
@@ -324,6 +336,17 @@ void loop() {
     }
   }
   // -------------------------------------------------------------
+
+#ifdef ENABLE_SERIAL_LOG
+  // Log most recent relay stop
+  if (lastRelayStop - lastRelayStopLogged != 0) {
+    if (millis() - lastRelayStop > (delayAfterMove * 0.80)) {
+      // After a move has had time to settle
+      logMoveDone();
+      lastRelayStopLogged = lastRelayStop;
+    }
+  }
+#endif
 
   // Handle buttons
   KEY key = readKeyInput();
@@ -589,4 +612,60 @@ KEY readKeyInput() {
     return key;  
   }
   return KEY_NONE;
+}
+
+// Log to serial a move start
+void logMoveStart() {
+#ifdef ENABLE_SERIAL_LOG
+  if (raising) {
+    if (upCount < 10) {
+      Serial.print('0');
+    }
+    Serial.print(upCount);
+    Serial.print(", UP, ");
+  } else if (lowering) {
+    if (dnCount < 10) {
+      Serial.print('0');
+    }
+    Serial.print(dnCount);
+    Serial.print(", DN, ");
+  } else {
+    Serial.print(", UNKNOWN Movement, ");
+  }
+  
+  Serial.print(setpoint);
+  Serial.print(", ");
+  Serial.print(input);
+  Serial.print(", ");
+  Serial.print(error);
+  Serial.println(", ");
+#endif
+}
+
+// Log to serial a move stop
+void logMoveStop() {
+#ifdef ENABLE_SERIAL_LOG
+  Serial.print(", STOP, ");
+  Serial.print(setpoint);
+  Serial.print(", ");
+  Serial.print(input);
+  Serial.print(", ");
+  Serial.print(error);
+  Serial.print(", ");
+  Serial.print(lastRelayStop - lastRelayStart);
+  Serial.println("ms");
+#endif
+}
+
+// Log to serial a move done
+void logMoveDone() {
+#ifdef ENABLE_SERIAL_LOG
+  Serial.print(", DONE, ");
+  Serial.print(setpoint);
+  Serial.print(", ");
+  Serial.print(input);
+  Serial.print(", ");
+  Serial.print(error);
+  Serial.println(", ");
+#endif
 }
