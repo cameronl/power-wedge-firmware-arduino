@@ -57,9 +57,11 @@ double stopTimeDn = 0.7; // angle (degrees)
 unsigned long delayAfterMove = 200; // milliseconds
 
 // List of user selectable set points
-double userSetpointLen = 8;
+int userSetpointLen = 8;
 double userSetpoints[] = {
-  90, 10, 6, 3, 0, -4, -8, -10  // angle (degrees)
+  90, 9, 6, 3, 0, -4, -8, -10  // angle (degrees) // Avoids sensor transition area at 10 deg
+  // 10, -10  // angle (degrees)
+  // 90, 20, 15, 14, 13, 12, 11, 9, 6, 3, 0, -4, -8, -10  // angle (degrees)  // Highlights PROBLEM TOLERANCE near 10 deg
 };
 
 // Safety / Error limits
