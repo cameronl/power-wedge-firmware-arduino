@@ -40,6 +40,19 @@ Minimum relay on time?
  - Relays take time to turn on/off. Don't try to move again if relay recently turned off.
  - Can we detect when a relay turned off after a turn on?
 
+Unexpected movement is bad. Sources of unexpected movement:
+ - Bad angle sensor input
+ - Tolerance near error
+ - Error flags which clear after a while or on MCU reset
+ - Set point changes
+
+Handle limits
+Manual movement
+ - Any use? Fallback.
+ - Or to get back from beyond limits?
+
+Option/config to disable checking for each error class.
+
 Debug:
  - Go to calibrated angle.
  - Go to angle sensor voltage.

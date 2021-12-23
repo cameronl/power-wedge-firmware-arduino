@@ -369,6 +369,7 @@ void loop() {
       lcd.clear();
       redraw = true;
     } else if (key == KEY_DOWN) {
+      // TODO Invert these 2 keys when we flip the unit and install it on a boat!
       prevSetpoint();
     } else if (key == KEY_UP) {
       nextSetpoint();
@@ -392,6 +393,7 @@ void loop() {
     redraw = false;
     tepTimer = millis();
 
+    // TODO Disable keypad input on error screen.
     // Pop up errors -- separate from normal screens below.
     if (errorFlags != 0) {
       lcd.clear();
