@@ -5,6 +5,7 @@ Noise on analog read?
  - Analog front end?
  - VREF
  - Keep analog ground away from relay ground
+ - Take multiple readings and average/median.
 ms per loop?
 Shielding?
 Log of relay cycles
@@ -52,6 +53,9 @@ Manual movement
  - Or to get back from beyond limits?
 
 Option/config to disable checking for each error class.
+Option/config for how to choose between sensor A & B.
+Option/config to edit user set point list?
+Option/config to recalibrate?
 
 Debug:
  - Go to calibrated angle.
@@ -88,6 +92,7 @@ What happens if sensor is disconnected? Do we need a weak pull up/down to detect
  - Each pin: power, read, ground?
 Error: sensor value fluctuations (changed too quickly?)
 
+Error: No movement when relay on.
 Error: Relay on too long. No control.
  - Max vs. typical?
 Error: High relay cycles. No control.
