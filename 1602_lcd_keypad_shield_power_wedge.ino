@@ -1,5 +1,8 @@
 /**
  * Power wedge control using 1602 LCD keypad shield on Arduino Uno.
+ * 
+ * If control enabled,  UP/DOWN keys iterate user set points.
+ * If control disabled, UP/DOWN keys are manual relay movement.
  */
 
 #include "coord_interp.h"
@@ -71,9 +74,6 @@ unsigned long maxRelayOnTime = 10000; // milliseconds
 unsigned long maxRelayCyclesPer  = 6;
 unsigned long maxRelayCyclesTime = 2000; // milliseconds
 
-#define setpointEepromAddr  999     // Where to store selected set point. Read on reboot.
-                                    // 0-1023 on Arduino Uno
-
 // Convert wedge angle to single character for display
 int angleToCharThresholdLen = 16;
 double angleToCharThreshold[] = {
@@ -86,6 +86,10 @@ char angleChars[] = {
 // ----------------------------------------------------------
 
 #define ENABLE_SERIAL_LOG
+
+#define controlEnableEepromAddr 998 // Where to store control enable. Read on reboot.
+#define setpointEepromAddr  999     // Where to store selected set point. Read on reboot.
+                                    // 0-1023 on Arduino Uno
 
 // TODO: Store and reference double volts or int millivolts?
 
@@ -234,7 +238,8 @@ void setup() {
 
   //setpoint = 3.500; // V
   goToUserSetpoint(userSetpointIndex);
-  controlEnable = true;
+  // controlEnable = true;
+  controlEnable = (EEPROM.read(controlEnableEepromAddr) & 0x1);
 }
 
 void loop() {
@@ -363,6 +368,11 @@ void loop() {
     if (key == KEY_NONE) {
       // Do nothing
     } else if (key == KEY_SELECT) {
+      controlEnable = !controlEnable;
+      moveStop();
+      // TODO Choose nearest user set point on re-enable control.
+      // Save this in EEPROM.
+      EEPROM.update(controlEnableEepromAddr, controlEnable ? 0x01 : 0x00);
     } else if (key == KEY_LEFT) {
       --screen;
       if (screen < 0) {
@@ -372,9 +382,13 @@ void loop() {
       redraw = true;
     } else if (key == KEY_DOWN) {
       // TODO Invert these 2 keys when we flip the unit and install it on a boat!
-      prevSetpoint();
+      if (controlEnable) {
+        prevSetpoint();
+      }
     } else if (key == KEY_UP) {
-      nextSetpoint();
+      if (controlEnable) {
+        nextSetpoint();
+      }
     } else if (key == KEY_RIGHT) {
       ++screen;
       if (screen > screens - 1) {
@@ -384,6 +398,25 @@ void loop() {
       redraw = true;
     } else {
       // Should never happen.
+    }
+  }
+
+  // Manual relay movement
+  if (!controlEnable) {
+    // Move based on keyState. Don't require key changes -- if key is down, move that direction.
+    // TODO Invert these 2 keys when we flip the unit and install it on a boat!
+    if (keyState == KEY_DOWN) {
+      if (!raising) {
+        moveRaise();
+      }
+    } else if (keyState == KEY_UP) {
+      if (!lowering) {
+        moveLower();
+      }
+    } else {
+      if (raising || lowering) {
+        moveStop();
+      }
     }
   }
 
@@ -547,7 +580,11 @@ void loop() {
       lcd.print("T");
     } else if (screen == 2) {
       lcd.setCursor(7, 0); // set the LCD cursor position
-      lcd.print(angleToChar(setpoint));
+      if (controlEnable) {
+        lcd.print(angleToChar(setpoint));
+      } else {
+        lcd.print('_');
+      }
       lcd.print(' ');
       lcd.print(angleToChar(input));
     } else if (screen == 3) {
@@ -642,6 +679,8 @@ void logMoveStart() {
   Serial.print(input);
   Serial.print(", ");
   Serial.print(error);
+  Serial.print(", ");
+  Serial.print(controlEnable ? "" : "MANUAL");
   Serial.println(", ");
 #endif
 }
