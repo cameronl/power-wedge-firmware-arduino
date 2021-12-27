@@ -142,6 +142,9 @@ uint16_t relayCount = 0;
 uint16_t lastRelayCount = 0;
 unsigned long relayCycleTimer = 0;  // last check of relay cycling
 
+double v1, v2;                      // Current sensor voltage
+double angle1, angle2, angleDiff;   // Current sensor calibrated angle
+
 double setpoint, input, output;
 double error;
 double tolerance;
@@ -246,8 +249,8 @@ void loop() {
   ++loopCount;
   
   // Read sensor voltage
-  double v1 = readAngleSensorV1();
-  double v2 = readAngleSensorV2();
+  v1 = readAngleSensorV1();
+  v2 = readAngleSensorV2();
 
   // TODO Handle noise
 
@@ -269,10 +272,14 @@ void loop() {
   }
 
   // Convert voltage to calibrated angle
-  double angle1 = interp(voltToAngle1, v1, numCalibPoints1);
-  double angle2 = interp(voltToAngle2, v2, numCalibPoints2);
+  angle1 = interp(voltToAngle1, v1, numCalibPoints1);
+  angle2 = interp(voltToAngle2, v2, numCalibPoints2);
 
-  // Convert angle to position for display
+  // Do the sensors agree on angle?
+  angleDiff = angle1 - angle2;
+  if (abs(angleDiff) > 1) {
+    logSensorDiff();
+  }
 
   // Choose one value from two sensors
   // TODO: What if both sensors don't agree?
@@ -710,5 +717,17 @@ void logMoveDone() {
   Serial.print(", ");
   Serial.print(error);
   Serial.println(", ");
+#endif
+}
+
+// Log to serial angle sensor difference
+void logSensorDiff() {
+#ifdef ENABLE_SERIAL_LOG
+  Serial.print("Sensor difference: ");
+  Serial.print(angleDiff);
+  Serial.print(" = ");
+  Serial.print(angle1);
+  Serial.print(" - ");
+  Serial.println(angle2);
 #endif
 }
