@@ -70,6 +70,8 @@ double userSetpoints[] = {
 // Safety / Error limits
 double maxSetpoint = 91.0;          // angle (degrees)
 double minSetpoint = -11.0;         // angle (degrees)
+double sensorsConvergeToleranceHighRes = 1.0; // angle (degrees)
+double sensorsConvergeToleranceLowRes = 10.0; // angle (degrees)
 unsigned long maxRelayOnTime = 10000; // milliseconds
 unsigned long maxRelayCyclesPer  = 6;
 unsigned long maxRelayCyclesTime = 2000; // milliseconds
@@ -125,6 +127,7 @@ unsigned long loopCount = 0;
 
 // Possible error flags
 #define ERR_BAD_SENSOR    0b10000000 // Angle sensor out of valid range. Check sensor connection, power.
+#define ERR_SENSOR_DIVERG 0b01000000 // Angle sensors diverged. Difference between sensors is too large.
 #define ERR_RELAY_CYCLING 0b00000010 // Relay cycling ON/OFF too much. Control unstable around setpoint.
 #define ERR_RELAY_ON_LONG 0b00000001 // Relay has been ON too long.
 
@@ -148,6 +151,7 @@ double angle1, angle2, angleDiff;   // Current sensor calibrated angle
 double setpoint, input, output;
 double error;
 double tolerance;
+double sensorsConvergeTolerance;
 
 int userSetpointIndex;              // Current position in list of user setpoints
 
@@ -277,8 +281,26 @@ void loop() {
 
   // Do the sensors agree on angle?
   angleDiff = angle1 - angle2;
+
+  // Handle sensorsConvergeTolerance on two different sensor ranges
+  if (angle1 < 10 && angle2 < 10) {
+    sensorsConvergeTolerance = sensorsConvergeToleranceHighRes;
+  } else {
+    sensorsConvergeTolerance = sensorsConvergeToleranceLowRes;
+  }
+  
   if (abs(angleDiff) > 1) {
     logSensorDiff();
+  }
+  if (abs(angleDiff) > sensorsConvergeTolerance) {
+    moveStop();
+    errorFlags |= ERR_SENSOR_DIVERG;      // Set error flag
+    // Log this? Count? Sum time in error? Display message?
+    // TODO: Should only call moveStop() if err flag not already set?
+  } else {
+    // Clear error automatically
+    // TODO: Log this? Count? Sum time in error? Display message?
+    errorFlags &= ~ERR_SENSOR_DIVERG;
   }
 
   // Choose one value from two sensors
@@ -444,6 +466,10 @@ void loop() {
       // Could do 1 per line, etc..
       if ((errorFlags & ERR_BAD_SENSOR) > 0) {
         lcd.print("Err Bad Sensor.");
+      } else if ((errorFlags & ERR_SENSOR_DIVERG) > 0) {
+        lcd.print("Err Sensors");
+        lcd.setCursor(0, 1); // set the LCD cursor position
+        lcd.print("Diverged");
       } else if ((errorFlags & ERR_RELAY_CYCLING) > 0) {
         lcd.print("Err Relays");
         lcd.setCursor(0, 1); // set the LCD cursor position

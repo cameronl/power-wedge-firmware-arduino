@@ -97,3 +97,5 @@ Error: Relay on too long. No control.
  - Max vs. typical?
 Error: High relay cycles. No control.
 
+Error sensors diverged (diff > threshold)
+
