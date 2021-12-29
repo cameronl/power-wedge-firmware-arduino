@@ -99,3 +99,14 @@ Error: High relay cycles. No control.
 
 Error sensors diverged (diff > threshold)
 
+Rev 1
+--
+two buttons (hold both to toggle manual mode)
+one 7-segment display for actual position
+2 LEDs (1 error, 1 manual mode)
+manual mode in hardware would be nice.
+minimal number of wires to dash (so need 7-seg driver + data bus or shift reg)
+ - 74HC595 using SPI serial?
+ - https://www.arduino.cc/en/Tutorial/Foundations/ShiftOut
+Log on SD card
+cable glands and connnectors to make wiring harness
