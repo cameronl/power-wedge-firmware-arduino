@@ -252,9 +252,16 @@ void setup() {
 void loop() {
   ++loopCount;
   
-  // Read sensor voltage
+  // Read sensor voltage (averaged to reject noise)
   v1 = readAngleSensorV1();
   v2 = readAngleSensorV2();
+  for (int i = 0; i < 5; ++i) {
+    delayMicroseconds(100);
+    v1 += readAngleSensorV1();
+    v2 += readAngleSensorV2();
+  }
+  v1 = v1/6.0;
+  v2 = v2/6.0;
 
   // TODO Handle noise
 
