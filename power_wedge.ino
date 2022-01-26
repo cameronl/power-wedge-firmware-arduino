@@ -50,7 +50,7 @@ coord_t voltToAngle2[8] =
 #define RELAY_DN_PIN  12
 
 double toleranceHighRes = 1.0; // +/- angle (degrees)
-double toleranceLowRes = 10.0; // +/- angle (degrees)
+double toleranceLowRes = 5.0; // +/- angle (degrees)
 
 // Additional angle (overshoot) due to relay turn off delay, etc.
 double stopTimeUp = 0.7; // angle (degrees)
@@ -62,9 +62,9 @@ unsigned long delayAfterMove = 200; // milliseconds
 // List of user selectable set points
 int userSetpointLen = 8;
 double userSetpoints[] = {
-  90, 9, 6, 3, 0, -4, -8, -10  // angle (degrees) // Avoids sensor transition area at 10 deg
+  85, 9, 6, 3, 0, -4, -8, -10  // angle (degrees) // Avoids sensor transition area at 10 deg
   // 10, -10  // angle (degrees)
-  // 90, 20, 15, 14, 13, 12, 11, 9, 6, 3, 0, -4, -8, -10  // angle (degrees)  // Highlights PROBLEM TOLERANCE near 10 deg
+  // 85, 20, 15, 14, 13, 12, 11, 10, 9, 6, 3, 0, -4, -8, -10  // angle (degrees)  // Highlights PROBLEM TOLERANCE near 10 deg
 };
 
 // Safety / Error limits
@@ -316,7 +316,8 @@ void loop() {
   input = angle1;
 
   // Handle tolerance on two different sensor ranges
-  if (input < 17.0) {
+  // if (input < 17.0) {
+  if (input < 10.0 || setpoint < 10.0) {
     tolerance = toleranceHighRes;
   } else {
     tolerance = toleranceLowRes;
