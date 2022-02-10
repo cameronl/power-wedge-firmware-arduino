@@ -6,15 +6,12 @@
  */
 
 #include "coord_interp.h"
+#include "board/uno_1602_lcd_keypad_shield_rev0.h"
+//#include "board/huzzah32_power_wedge_control_rev0.h"
 
 // Calibration
 
-// VIN or VREF (to angle sensor and ADC) affects analog read
-// ADC resolution (number of bits) sets max analog read value
 // Mounting angle offset to calibrated angle?
-
-#define readAngleSensorV1()  (double) analogRead(A4) / 1023.0 * 5.0
-#define readAngleSensorV2()  (double) analogRead(A5) / 1023.0 * 5.0
 
 // Separate calibration for each angle sensor...
 
@@ -45,9 +42,6 @@ coord_t voltToAngle2[8] =
     {4.4920, 100},
     {5.2573, 240}
 };
-
-#define RELAY_UP_PIN  11
-#define RELAY_DN_PIN  12
 
 double toleranceHighRes = 1.0; // +/- angle (degrees)
 double toleranceLowRes = 5.0; // +/- angle (degrees)
@@ -88,10 +82,6 @@ char angleChars[] = {
 // ----------------------------------------------------------
 
 #define ENABLE_SERIAL_LOG
-
-#define controlEnableEepromAddr 998 // Where to store control enable. Read on reboot.
-#define setpointEepromAddr  999     // Where to store selected set point. Read on reboot.
-                                    // 0-1023 on Arduino Uno
 
 // TODO: Store and reference double volts or int millivolts?
 
