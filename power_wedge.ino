@@ -81,7 +81,7 @@ char angleChars[] = {
 
 // ----------------------------------------------------------
 
-#define ENABLE_SERIAL_LOG
+// #define ENABLE_SERIAL_LOG
 
 // TODO: Store and reference double volts or int millivolts?
 
