@@ -6,8 +6,14 @@
  */
 
 #include "coord_interp.h"
-#include "board/uno_1602_lcd_keypad_shield_rev0.h"
+#include "board/uno_1602_lcd_keypad_shield_rev1.h"
 //#include "board/huzzah32_power_wedge_control_rev0.h"
+#include "ui7seg_rev1b.h"
+
+// Aliases
+#define UISIG_ERROR   UI_LED1 // Signal: Error
+#define UISIG_MANUAL  UI_LED2 // Signal: Manual mode
+#define UISIG_ACTIVE  UI_RDP  // Signal: Motor activity
 
 // Calibration
 
@@ -86,9 +92,11 @@ char angleChars[] = {
 // TODO: Store and reference double volts or int millivolts?
 
 #include <EEPROM.h>
+#include "IS31FL3726A.h"
 #include <LiquidCrystal.h>
 
-LiquidCrystal lcd(8, 9, 4, 5, 6, 7); // select the pins used on the LCD panel
+IS31FL3726A seg7(UI_SERIAL_PIN, UI_ENABLE_PIN, UI_LATCH_PIN, UI_CLOCK_PIN);
+LiquidCrystal lcd(LCD_RS_PIN, LCD_EN_PIN, LCD_D0_PIN, LCD_D1_PIN, LCD_D2_PIN, LCD_D3_PIN);
 
 unsigned long tepTimer ;
 
@@ -111,6 +119,8 @@ unsigned long debounceDelay = 50;   // the debounce time; increase if the output
 bool redraw = true;                 // should redraw the lcd screen
 int screens = 4;
 int screen = 0;
+
+uint8_t seg7Counter = 0;            // testing 7-segment display
 
 // For debug
 unsigned long loopCount = 0;
@@ -217,7 +227,13 @@ void setup() {
   Serial.println("Hello Computer!");
 #endif
 
-  lcd.begin(16, 2); // start the library
+  seg7.begin();
+  lcd.begin(16, 2);
+
+  // Up/down buttons on dash
+  pinMode(EN_MANUAL_PIN, INPUT);
+  pinMode(BTN_DN_PIN, INPUT);
+  pinMode(BTN_UP_PIN, INPUT);
 
   // Relay control pins
   digitalWrite(RELAY_UP_PIN, LOW);
@@ -454,6 +470,19 @@ void loop() {
     
     redraw = false;
     tepTimer = millis();
+
+    // Update 7-segment display
+    // For testing, highlight each segment one at a time
+    ++seg7Counter;
+    if (seg7Counter > 15) {
+      seg7Counter = 0; // rollover
+    }
+    seg7.set(0x1 << seg7Counter);
+    // seg7.set(0b0100000000000001);
+
+    // seg7.set(UICHAR_4 | UISIG_ERROR);
+    // seg7.set(UICHAR_F | UISIG_ACTIVE);
+    // seg7.set(UICHAR_0 | UISIG_MANUAL);
 
     // TODO Disable keypad input on error screen.
     // Pop up errors -- separate from normal screens below.

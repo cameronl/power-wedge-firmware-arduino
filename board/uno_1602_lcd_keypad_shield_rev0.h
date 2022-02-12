@@ -1,6 +1,8 @@
 #ifndef BOARD__UNO_1602_LCD_KEYPAD_SHIELD_REV0
 #define BOARD__UNO_1602_LCD_KEYPAD_SHIELD_REV0
 
+// Control Board (PCB): breadboard prototype
+
 // VIN or VREF (to angle sensor and ADC) affects analog read
 // ADC resolution (number of bits) sets max analog read value
 
