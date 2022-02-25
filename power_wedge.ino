@@ -474,10 +474,57 @@ void loop() {
     // Update 7-segment display
     // For testing, highlight each segment one at a time
     ++seg7Counter;
-    if (seg7Counter > 15) {
+    if (seg7Counter > 13) {
       seg7Counter = 0; // rollover
     }
-    seg7.set(0x1 << seg7Counter);
+    // seg7.set(0x1 << seg7Counter);
+    // seg7.set(UICHAR_E | (seg7Counter % 2 > 0 ? UI_LDP : UI_RDP));
+    // seg7.set(UICHAR_7 | (seg7Counter % 2 > 0 ? UI_LED1 : UI_LED2));
+    // seg7.set(UICHAR_7 | (seg7Counter % 2 > 0 ? UI_NONE : UI_LED1));
+    // seg7.set(UICHAR_7 | (seg7Counter % 2 > 0 ? UI_LDP : UI_LED1));
+    // seg7.set(UICHAR_7 | UI_LED2);
+    // seg7.set(UI_LDP | (seg7Counter % 2 > 0 ? UI_NONE : UICHAR_7)); // Flash the char
+    // seg7.set(UI_RDP | (seg7Counter % 2 > 0 ? UICHAR_6 : UICHAR_7)); // Alternate chars
+
+    // Test pattern
+    if (seg7Counter == 0) {
+      seg7.set(UICHAR_0);
+      // seg7.set(UICHAR_4 | UISIG_ERROR);
+      // seg7.set(UI_LED1);
+    } else if (seg7Counter == 1) {
+      seg7.set(UICHAR_1);
+      // seg7.set(UICHAR_F | UISIG_ACTIVE);
+      // seg7.set(UI_LDP);
+    } else if (seg7Counter == 2) {
+      seg7.set(UICHAR_2);
+      // seg7.set(UICHAR_0 | UISIG_MANUAL);
+      // seg7.set(UI_RDP);
+    } else if (seg7Counter == 3) {
+      seg7.set(UICHAR_3);
+      // seg7.set(UICHAR_A);
+      // seg7.set(UI_LED2);
+    } else if (seg7Counter == 4) {
+      seg7.set(UICHAR_4);
+    } else if (seg7Counter == 5) {
+      seg7.set(UICHAR_5);
+    } else if (seg7Counter == 6) {
+      seg7.set(UICHAR_6);
+    } else if (seg7Counter == 7) {
+      seg7.set(UICHAR_7);
+    } else if (seg7Counter == 8) {
+      seg7.set(UICHAR_8);
+    } else if (seg7Counter == 9) {
+      seg7.set(UICHAR_9);
+    } else if (seg7Counter == 10) {
+      seg7.set(UI_LED1);
+    } else if (seg7Counter == 11) {
+      seg7.set(UI_LED2);
+    } else if (seg7Counter == 12) {
+      seg7.set(UI_LDP);
+    } else if (seg7Counter == 13) {
+      seg7.set(UI_RDP);
+    }
+
     // seg7.set(0b0100000000000001);
 
     // seg7.set(UICHAR_4 | UISIG_ERROR);
