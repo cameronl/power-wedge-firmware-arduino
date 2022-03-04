@@ -464,25 +464,6 @@ void loop() {
     }
   }
 
-  // Manual relay movement
-  if (!controlEnable) {
-    // Move based on keyState. Don't require key changes -- if key is down, move that direction.
-    // TODO Invert these 2 keys when we flip the unit and install it on a boat!
-    if (keyState == KEY_DOWN) {
-      if (!raising) {
-        moveRaise();
-      }
-    } else if (keyState == KEY_UP) {
-      if (!lowering) {
-        moveLower();
-      }
-    } else {
-      if (raising || lowering) {
-        moveStop();
-      }
-    }
-  }
-
   if (redraw || millis() - tepTimer > 500) {
     // For debug, calc stepTime
     int stepTime = loopCount;
