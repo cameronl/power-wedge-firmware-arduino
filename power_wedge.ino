@@ -131,6 +131,9 @@ enum KEY {
 
 KEY keyState = KEY_NONE;            // set every time a debounced key change occurs
 KEY lastRealKey = KEY_NONE;         // set every time a key change is read (no software debounce)
+
+uint8_t dashBtnState = 0;           // State of dash buttons (UP/DN)
+
 // the following variables are unsigned longs because the time, measured in
 // milliseconds, will quickly become a bigger number than can be stored in an int.
 unsigned long lastRealKeyTime = 0;  // last time key changed (for debounce)
@@ -418,7 +421,33 @@ void loop() {
   }
 #endif
 
-  // Handle buttons
+  // Handle dash buttons
+  uint8_t dashBtns = digitalRead(BTN_DN_PIN) | (digitalRead(BTN_UP_PIN) << 1);
+  if (dashBtns != dashBtnState) {
+    // A change
+    dashBtnState = dashBtns;
+
+    // Handle the change
+    bool btnDn = dashBtns & 0b00000001;
+    bool btnUp = dashBtns & 0b00000010;
+    if (!btnDn && !btnUp) {
+      // Do nothing
+    } else if (btnDn && btnUp) {
+      // Ignore
+      // OPTION Log this?
+    } else if (btnDn) {
+      // TODO Invert these 2 keys when we flip the unit and install it on a boat?
+      if (controlEnable) {
+        prevSetpoint();
+      }
+    } else if (btnUp) {
+      if (controlEnable) {
+        nextSetpoint();
+      }
+    }
+  }
+
+  // Handle keypad buttons
   KEY key = readKeyInput();
 
   // TODO: Only update on key change?
