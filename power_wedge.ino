@@ -133,6 +133,8 @@ KEY keyState = KEY_NONE;            // set every time a debounced key change occ
 KEY lastRealKey = KEY_NONE;         // set every time a key change is read (no software debounce)
 
 uint8_t dashBtnState = 0;           // State of dash buttons (UP/DN)
+unsigned long dashBtnLastTime = 0;  // last time dash button activated
+unsigned long dashBtnRepeatDelay = 800;  // time (ms) before repeating button if held down
 
 // the following variables are unsigned longs because the time, measured in
 // milliseconds, will quickly become a bigger number than can be stored in an int.
@@ -423,9 +425,10 @@ void loop() {
 
   // Handle dash buttons
   uint8_t dashBtns = digitalRead(BTN_DN_PIN) | (digitalRead(BTN_UP_PIN) << 1);
-  if (dashBtns != dashBtnState) {
+  if (dashBtns != dashBtnState || (dashBtns != 0 && millis() - dashBtnLastTime > dashBtnRepeatDelay)) {
     // A change
     dashBtnState = dashBtns;
+    dashBtnLastTime = millis();
 
     // Handle the change
     bool btnDn = dashBtns & 0b00000001;
