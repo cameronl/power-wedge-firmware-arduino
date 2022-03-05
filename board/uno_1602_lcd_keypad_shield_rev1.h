@@ -31,7 +31,6 @@
 #define LCD_D3_PIN  7
 // LCD backlight is on pin 10 and pulled up by the 1602 LCD shield
 
-#define controlEnableEepromAddr 998 // Where to store control enable. Read on reboot.
 #define setpointEepromAddr  999     // Where to store selected set point. Read on reboot.
                                     // 0-1023 on Arduino Uno
 

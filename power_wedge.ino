@@ -145,8 +145,6 @@ bool redraw = true;                 // should redraw the lcd screen
 int screens = 4;
 int screen = 0;
 
-uint8_t seg7Counter = 0;            // testing 7-segment display
-
 // For debug
 unsigned long loopCount = 0;
 
@@ -276,8 +274,6 @@ void setup() {
 
   //setpoint = 3.500; // V
   goToUserSetpoint(userSetpointIndex);
-  // controlEnable = false;
-  controlEnable = (EEPROM.read(controlEnableEepromAddr) & 0x1);
 }
 
 void loop() {
@@ -448,7 +444,6 @@ void loop() {
       // Ignore
       // OPTION Log this?
     } else if (btnDn) {
-      // TODO Invert these 2 keys when we flip the unit and install it on a boat?
       if (controlEnable) {
         prevSetpoint();
       }
@@ -472,11 +467,7 @@ void loop() {
     if (key == KEY_NONE) {
       // Do nothing
     } else if (key == KEY_SELECT) {
-      controlEnable = !controlEnable;
-      moveStop();
-      // TODO Choose nearest user set point on re-enable control.
-      // Save this in EEPROM.
-      EEPROM.update(controlEnableEepromAddr, controlEnable ? 0x01 : 0x00);
+      // Unused
     } else if (key == KEY_LEFT) {
       --screen;
       if (screen < 0) {
@@ -485,14 +476,9 @@ void loop() {
       lcd.clear();
       redraw = true;
     } else if (key == KEY_DOWN) {
-      // TODO Invert these 2 keys when we flip the unit and install it on a boat!
-      if (controlEnable) {
-        prevSetpoint();
-      }
+      // Unused
     } else if (key == KEY_UP) {
-      if (controlEnable) {
-        nextSetpoint();
-      }
+      // Unused
     } else if (key == KEY_RIGHT) {
       ++screen;
       if (screen > screens - 1) {
