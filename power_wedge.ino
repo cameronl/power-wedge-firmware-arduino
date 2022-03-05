@@ -354,6 +354,7 @@ void loop() {
     tolerance = toleranceLowRes;
   }
 
+  // TODO Only check this below if control is enabled?
   // Check relay ON too long
   if ((raising || lowering) && millis() - lastRelayStart > maxRelayOnTime) {
     moveStop();
@@ -377,6 +378,14 @@ void loop() {
       // TODO When to reset/clear this error?
     }
     lastRelayCount = relayCount;
+  }
+
+  // See if control is enabled?
+  bool manualEnable = digitalRead(EN_MANUAL_PIN) == HIGH;
+  if (controlEnable != !manualEnable) {
+    // A change
+    controlEnable = !manualEnable;
+    moveStop();
   }
 
   // -------------------------------------------------------------
@@ -514,6 +523,9 @@ void loop() {
     }
     if (errorFlags != 0) {
       uiOut |= UISIG_ERROR;
+    }
+    if (!controlEnable) {
+      uiOut |= UISIG_MANUAL;
     }
     seg7.set(uiOut);
 
