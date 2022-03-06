@@ -10,11 +10,6 @@
 //#include "board/huzzah32_power_wedge_control_rev0.h"
 #include "ui7seg_rev1b.h"
 
-// Aliases
-#define UISIG_ERROR   UI_LED1 // Signal: Error
-#define UISIG_MANUAL  UI_LED2 // Signal: Manual mode
-// #define UISIG_ACTIVE  UI_RDP  // Signal: Motor activity
-
 // Calibration
 
 // Mounting angle offset to calibrated angle?
@@ -508,10 +503,10 @@ void loop() {
       uiOut |= UI_LDP;
     }
     if (errorFlags != 0) {
-      uiOut |= UISIG_ERROR;
+      uiOut |= UI_LED1;
     }
     if (!controlEnable) {
-      uiOut |= UISIG_MANUAL;
+      uiOut |= UI_LED2;
     }
     seg7.set(uiOut);
 
