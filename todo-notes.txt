@@ -110,3 +110,10 @@ minimal number of wires to dash (so need 7-seg driver + data bus or shift reg)
  - https://www.arduino.cc/en/Tutorial/Foundations/ShiftOut
 Log on SD card
 cable glands and connnectors to make wiring harness
+
+## TODO Add firmware version to display on LCD screen.
+
+## Config
+
+- Which error flags to worry about?
+- What needs to be in config vs. hard-coded?
