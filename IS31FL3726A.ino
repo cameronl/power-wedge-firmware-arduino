@@ -59,6 +59,14 @@ void IS31FL3726A::set(uint16_t outs) {
   digitalWrite(_enable_pin, _displayOn ? LOW : HIGH);
 }
 
+void IS31FL3726A::displayOn(bool enable) {
+  if (enable) {
+    displayOn();
+  } else {
+    displayOff();
+  }
+}
+
 void IS31FL3726A::displayOn() {
   digitalWrite(_enable_pin, LOW);
   _displayOn = true;
@@ -68,3 +76,8 @@ void IS31FL3726A::displayOff() {
   digitalWrite(_enable_pin, HIGH);
   _displayOn = false;
 }
+
+bool IS31FL3726A::isDisplayOn() {
+  return _displayOn;
+}
+

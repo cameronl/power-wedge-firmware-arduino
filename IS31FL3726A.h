@@ -16,6 +16,8 @@ public:
 
   void displayOff();
   void displayOn();
+  void displayOn(bool enable);
+  bool isDisplayOn();
   
 private:
   uint8_t _serial_pin; // Serial data for data shift register.
