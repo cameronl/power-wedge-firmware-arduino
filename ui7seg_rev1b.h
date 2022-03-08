@@ -10,7 +10,7 @@
 #define UICHAR_F 0b0001110000010000 // Character F
 #define UICHAR_E 0b0001110000010100 // Character E
 #define UICHAR_D 0b0001000000111100 // Character d
-#define UICHAR_C 0b0001000000010100 // Character c
+#define UICHAR_C 0b0001110000000100 // Character C
 #define UICHAR_B 0b0001100000011100 // Character b
 #define UICHAR_A 0b0001110000111000 // Character A
 #define UICHAR_9 0b0000110000111100
