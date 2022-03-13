@@ -495,7 +495,7 @@ void loop() {
     tepTimer = millis();
 
     // Update 7-segment display
-    uint16_t uiOut = angleToUIChar(setpoint);
+    uint16_t uiOut = angleToUIChar(controlEnable ? setpoint : input);
     if (raising) {
       uiOut |= UI_RDP;
     }
