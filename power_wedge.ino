@@ -71,6 +71,8 @@ unsigned long maxRelayOnTime = 10000; // milliseconds
 unsigned long maxRelayCyclesPer  = 6;
 unsigned long maxRelayCyclesTime = 2000; // milliseconds
 
+uint8_t useAngleSensor = 2;         // Which angle sensor to use?
+
 // Convert wedge angle to single character for display
 int angleToCharThresholdLen = 16;
 double angleToCharThreshold[] = {
@@ -101,6 +103,9 @@ uint16_t angleUIChars[] = {
 };
 
 // ----------------------------------------------------------
+
+#define modelVersion 0
+#define firmwareVersion 0
 
 // #define ENABLE_SERIAL_LOG
 
@@ -137,21 +142,24 @@ unsigned long lastRealKeyTime = 0;  // last time key changed (for debounce)
 unsigned long debounceDelay = 50;   // the debounce time; increase if the output flickers
 
 bool redraw = true;                 // should redraw the lcd screen
-int screens = 4;
+int screens = 5;
 int screen = 0;
 
 // For debug
 unsigned long loopCount = 0;
 
 // Possible error flags
-#define ERR_BAD_SENSOR    0b10000000 // Angle sensor out of valid range. Check sensor connection, power.
-#define ERR_SENSOR_DIVERG 0b01000000 // Angle sensors diverged. Difference between sensors is too large.
+#define ERR_BAD_SENSOR1   0b10000000 // Angle sensor out of valid range. Check sensor connection, power.
+#define ERR_BAD_SENSOR2   0b01000000 // Angle sensor out of valid range. Check sensor connection, power.
+#define ERR_SENSOR_DIVERG 0b00000100 // Angle sensors diverged. Difference between sensors is too large.
 #define ERR_RELAY_CYCLING 0b00000010 // Relay cycling ON/OFF too much. Control unstable around setpoint.
 #define ERR_RELAY_ON_LONG 0b00000001 // Relay has been ON too long.
 
 // For control
 bool controlEnable = false;         // Enable automatic control
-uint8_t errorFlags = 0;             // Errors which inhibit control
+uint8_t errorFlags = 0;             // Errors which are currently occurring
+uint8_t lastErrorFlags = 0;         // For detecting when error flags change
+uint8_t controlErrors = 0xFF;       // Bitmask indicating which errors inhibit control
 bool raising, lowering = false;
 
 // For checking relay cycling too frequently or on too long
@@ -285,23 +293,23 @@ void loop() {
   v1 = v1/6.0;
   v2 = v2/6.0;
 
-  // TODO Handle noise
-
-  // TODO If control by angle instead of voltage, include angle in check?
-  // TODO Separate error flag for each angle sensor?
-  // Sanity check input
+  // Sanity check input for:
+  //   Angle sensor out of valid range
+  //   Check sensor connection, power.
   // Don't use this to limit movement (use maxSetpoint or something else).
-  if (v1 < 0.30 || v1 > 4.70 || v2 < 0.30 || v2 > 4.65) {
-    // Angle sensor out of valid range
-    // Check sensor connection, power.
+  if (v1 < 0.30 || v1 > 4.70) {
     moveStop();
-    errorFlags |= ERR_BAD_SENSOR;      // Set error flag
-    // Log this? Count? Sum time in error? Display message?
-    // TODO: Should only call moveStop() if err flag not already set?
+    errorFlags |= ERR_BAD_SENSOR1;      // Set error flag
   } else {
     // Clear error automatically
-    // TODO: Log this? Count? Sum time in error? Display message?
-    errorFlags &= ~ERR_BAD_SENSOR;
+    errorFlags &= ~ERR_BAD_SENSOR1;
+  }
+  if (v2 < 0.30 || v2 > 4.65) {
+    moveStop();
+    errorFlags |= ERR_BAD_SENSOR2;      // Set error flag
+  } else {
+    // Clear error automatically
+    errorFlags &= ~ERR_BAD_SENSOR2;
   }
 
   // Convert voltage to calibrated angle
@@ -311,31 +319,36 @@ void loop() {
   // Do the sensors agree on angle?
   angleDiff = angle1 - angle2;
 
-  // Handle sensorsConvergeTolerance on two different sensor ranges
-  if (angle1 < 10 && angle2 < 10) {
-    sensorsConvergeTolerance = sensorsConvergeToleranceHighRes;
-  } else {
-    sensorsConvergeTolerance = sensorsConvergeToleranceLowRes;
-  }
-  
-  if (abs(angleDiff) > 1) {
-    logSensorDiff();
-  }
-  if (abs(angleDiff) > sensorsConvergeTolerance) {
-    moveStop();
-    errorFlags |= ERR_SENSOR_DIVERG;      // Set error flag
-    // Log this? Count? Sum time in error? Display message?
-    // TODO: Should only call moveStop() if err flag not already set?
-  } else {
-    // Clear error automatically
-    // TODO: Log this? Count? Sum time in error? Display message?
-    errorFlags &= ~ERR_SENSOR_DIVERG;
-  }
-
   // Choose one value from two sensors
-  // TODO: What if both sensors don't agree?
-  //input = (angle1 + angle2)/2.0;
-  input = angle1;
+  if (useAngleSensor == 1) {
+    input = angle1;
+  } else if (useAngleSensor == 2) {
+    input = angle2;
+  } else if (useAngleSensor == 3) {
+    // TODO: What if both sensors don't agree?
+    // Handle sensorsConvergeTolerance on two different sensor ranges
+    if (angle1 < 10 && angle2 < 10) {
+      sensorsConvergeTolerance = sensorsConvergeToleranceHighRes;
+    } else {
+      sensorsConvergeTolerance = sensorsConvergeToleranceLowRes;
+    }
+    
+    if (abs(angleDiff) > 1) {
+      logSensorDiff();
+    }
+    if (abs(angleDiff) > sensorsConvergeTolerance) {
+      moveStop();
+      errorFlags |= ERR_SENSOR_DIVERG;      // Set error flag
+      // Log this? Count? Sum time in error? Display message?
+      // TODO: Should only call moveStop() if err flag not already set?
+    } else {
+      // Clear error automatically
+      // TODO: Log this? Count? Sum time in error? Display message?
+      errorFlags &= ~ERR_SENSOR_DIVERG;
+    }
+
+    input = (angle1 + angle2)/2.0;
+  }
 
   // Handle tolerance on two different sensor ranges
   // if (input < 17.0) {
@@ -382,7 +395,7 @@ void loop() {
   // -------------------------------------------------------------
   // Control
   error = input - setpoint;
-  if (controlEnable && errorFlags == 0) {
+  if (controlEnable && (errorFlags & controlErrors) == 0) {
     // Bang-bang control with hysteresis
     if (raising) {
       if (input < setpoint - stopTimeUp) {
@@ -468,7 +481,7 @@ void loop() {
       if (screen < 0) {
         screen = screens - 1; // wrap around
       }
-      lcd.clear();
+      // lcd.clear();
       redraw = true;
     } else if (key == KEY_DOWN) {
       // Unused
@@ -479,14 +492,27 @@ void loop() {
       if (screen > screens - 1) {
         screen = 0; // wrap around
       }
-      lcd.clear();
+      // lcd.clear();
       redraw = true;
     } else {
       // Should never happen.
     }
   }
 
-  if (redraw || millis() - tepTimer > 500) {
+  // LCD clear screen is slow, so only do so when something changes
+  if (errorFlags != lastErrorFlags) {
+    lastErrorFlags = errorFlags;
+    // A change
+    redraw = true;
+
+    // Log error changes? Count? Sum time in error? Display message?
+    // TODO: Should only call moveStop() if err flag not already set?
+  }
+
+  if (redraw || millis() - tepTimer > 200) {
+    if (redraw == true) {
+      lcd.clear();
+    }
     // For debug, calc stepTime
     int stepTime = loopCount;
     loopCount = 0;
@@ -515,31 +541,35 @@ void loop() {
     // seg7.set(UICHAR_0 | UISIG_MANUAL);
 
     // TODO Disable keypad input on error screen.
-    // Pop up errors -- separate from normal screens below.
-    if (errorFlags != 0) {
-      lcd.clear();
-      lcd.setCursor(0, 0); // set the LCD cursor position
-      // If we use the whole screen, only show 1 error
-      // Could do 1 per line, etc..
-      if ((errorFlags & ERR_BAD_SENSOR) > 0) {
-        lcd.print("Err Bad Sensor.");
-      } else if ((errorFlags & ERR_SENSOR_DIVERG) > 0) {
-        lcd.print("Err Sensors");
-        lcd.setCursor(0, 1); // set the LCD cursor position
-        lcd.print("Diverged");
-      } else if ((errorFlags & ERR_RELAY_CYCLING) > 0) {
-        lcd.print("Err Relays");
-        lcd.setCursor(0, 1); // set the LCD cursor position
-        lcd.print("Cycling On/Off");
-      } else if ((errorFlags & ERR_RELAY_ON_LONG) > 0) {
-        lcd.print("Err Relay On");
-        lcd.setCursor(0, 1); // set the LCD cursor position
-        lcd.print("    Too Long");
-      }
-      return; // Don't draw screens below
-    }
 
     if (screen == 0) {
+      lcd.setCursor(0, 0); // set the LCD cursor position
+      if (errorFlags == 0) {
+          lcd.print("PowerWedge v");
+          lcd.print(modelVersion);
+          lcd.print('.');
+          lcd.print(firmwareVersion);
+          lcd.setCursor(3, 1); // set the LCD cursor position
+          lcd.print("No Errors");
+      } else {
+        // One error per line, can only show two.
+        if ((errorFlags & ERR_BAD_SENSOR1) > 0) {
+          lcd.print("Err Bad Sensor 1"); lcd.setCursor(0, 1); // next line
+        }
+        if ((errorFlags & ERR_BAD_SENSOR2) > 0) {
+          lcd.print("Err Bad Sensor 2"); lcd.setCursor(0, 1); // next line
+        }
+        if ((errorFlags & ERR_RELAY_CYCLING) > 0) {
+          lcd.print("ErrRelay Cycling"); lcd.setCursor(0, 1); // next line
+        }
+        if ((errorFlags & ERR_RELAY_ON_LONG) > 0) {
+          lcd.print("Relay On TooLong"); lcd.setCursor(0, 1); // next line
+        }
+        if ((errorFlags & ERR_SENSOR_DIVERG) > 0) {
+          lcd.print("Err SensDiverged"); lcd.setCursor(0, 1); // next line
+        }
+      }
+    } else if (screen == 1) {
       // Print V1, angle1
       lcd.setCursor(0, 0); // set the LCD cursor position
       lcd.print(v1);
@@ -615,7 +645,7 @@ void loop() {
       //    }
       //    lcd.print(k);
       //  }
-    } else if (screen == 1) {
+    } else if (screen == 2) {
       // Print setpoint
       lcd.setCursor(0, 0); // set the LCD cursor position
       lcd.print("S");
@@ -668,7 +698,7 @@ void loop() {
       }
       lcd.print(tolerance);
       lcd.print("T");
-    } else if (screen == 2) {
+    } else if (screen == 3) {
       lcd.setCursor(7, 0); // set the LCD cursor position
       if (controlEnable) {
         lcd.print(angleToChar(setpoint));
@@ -677,7 +707,7 @@ void loop() {
       }
       lcd.print(' ');
       lcd.print(angleToChar(input));
-    } else if (screen == 3) {
+    } else if (screen == 4) {
       // Print stepTime
       lcd.setCursor(9, 0); // set the LCD cursor position
       if (abs(stepTime) < 100) {
