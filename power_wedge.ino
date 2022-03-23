@@ -71,8 +71,6 @@ unsigned long maxRelayOnTime = 15000; // milliseconds
 unsigned long maxRelayCyclesPer  = 6;
 unsigned long maxRelayCyclesTime = 2000; // milliseconds
 
-uint8_t useAngleSensor = 2;         // Which angle sensor to use?
-
 // Convert wedge angle to single character for display
 int angleToCharThresholdLen = 16;
 double angleToCharThreshold[] = {
@@ -144,6 +142,11 @@ unsigned long debounceDelay = 50;   // the debounce time; increase if the output
 bool redraw = true;                 // should redraw the lcd screen
 int screens = 5;
 int screen = 0;
+#define SCREEN_PROD_ERR 0
+#define SCREEN_ANGLE_READ 1
+#define SCREEN_INPUT_VS_SET 2
+#define SCREEN_RELAY_COUNTS 3
+#define SCREEN_USE_ANGLE_SENS 4
 
 // Possible error flags
 #define ERR_BAD_SENSOR1   0b10000000 // Angle sensor out of valid range. Check sensor connection, power.
@@ -177,6 +180,51 @@ double tolerance;
 double sensorsConvergeTolerance;
 
 int userSetpointIndex;              // Current position in list of user setpoints
+uint8_t useAngleSensor;             // Which angle sensor to use?
+
+void prevAngleSensor() {
+  useAngleSensor--;
+  if (useAngleSensor < 1) {
+    useAngleSensor = 3;
+  }
+  onAngleSensorChange();
+}
+
+void nextAngleSensor() {
+  useAngleSensor++;
+  if (useAngleSensor > 3) {
+    useAngleSensor = 1;
+  }
+  onAngleSensorChange();
+}
+
+// Call when there is a change to which angle sensor to use.
+void onAngleSensorChange() {
+  moveStop();
+  // Which errors should apply to this angle sensor?
+  if (useAngleSensor == 1) {
+    // If using sensor 1, we don't care about errors from sensor 2
+    controlErrors &= ~ERR_BAD_SENSOR2;     // Clear bit
+    controlErrors &= ~ERR_SENSOR_DIVERG;   // Clear bit
+    // But we do care about errors from sensor 1
+    controlErrors |= ERR_BAD_SENSOR1;      // Set bit
+  } else if (useAngleSensor == 2) {
+    // If using sensor 2, we don't care about errors from sensor 1
+    controlErrors &= ~ERR_BAD_SENSOR1;     // Clear bit
+    controlErrors &= ~ERR_SENSOR_DIVERG;   // Clear bit
+    // But we do care about errors from sensor 2
+    controlErrors |= ERR_BAD_SENSOR2;      // Set bit
+  } else if (useAngleSensor == 3) {
+    // If requiring both sensors, we do care about errors from both
+    controlErrors |= ERR_BAD_SENSOR1;      // Set bit
+    controlErrors |= ERR_BAD_SENSOR2;      // Set bit
+    controlErrors |= ERR_SENSOR_DIVERG;    // Set bit
+  }
+  // TODO Implement useAngleSensor == 4 (Any valid)
+
+  // Save this config choice in EEPROM
+  EEPROM.update(useAngleSensorEepromAddr, useAngleSensor & 0xFF);
+}
 
 void prevSetpoint() {
   --userSetpointIndex;
@@ -265,6 +313,12 @@ void setup() {
   pinMode(RELAY_DN_PIN, OUTPUT);
   // moveStop();
 
+  useAngleSensor = EEPROM.read(useAngleSensorEepromAddr);
+  if (useAngleSensor > 3 || useAngleSensor < 1) {
+    useAngleSensor = 1; // Default to sensor 1
+  }
+  onAngleSensorChange();
+
   // What if MCU reboots? Don't want setpoint to jump. Store/load it from flash.
   // Currently storing index in list of user setpoints -- NOT the actual angle/voltage.
   userSetpointIndex = EEPROM.read(setpointEepromAddr);
@@ -293,15 +347,19 @@ void loop() {
   //   Check sensor connection, power.
   // Don't use this to limit movement (use maxSetpoint or something else).
   if (v1 < 0.30 || v1 > 4.70) {
-    moveStop();
     errorFlags |= ERR_BAD_SENSOR1;      // Set error flag
+    if (controlErrors & ERR_BAD_SENSOR1) {
+      moveStop();
+    }
   } else {
     // Clear error automatically
     errorFlags &= ~ERR_BAD_SENSOR1;
   }
   if (v2 < 0.30 || v2 > 4.65) {
-    moveStop();
     errorFlags |= ERR_BAD_SENSOR2;      // Set error flag
+    if (controlErrors & ERR_BAD_SENSOR2) {
+      moveStop();
+    }
   } else {
     // Clear error automatically
     errorFlags &= ~ERR_BAD_SENSOR2;
@@ -314,6 +372,23 @@ void loop() {
   // Do the sensors agree on angle?
   angleDiff = angle1 - angle2;
 
+  // Check if both sensors agree
+  // Handle sensorsConvergeTolerance on two different sensor ranges
+  if (angle1 < 10 && angle2 < 10) {
+    sensorsConvergeTolerance = sensorsConvergeToleranceHighRes;
+  } else {
+    sensorsConvergeTolerance = sensorsConvergeToleranceLowRes;
+  }
+  if (abs(angleDiff) > sensorsConvergeTolerance) {
+    errorFlags |= ERR_SENSOR_DIVERG;      // Set error flag
+    if (controlErrors & ERR_SENSOR_DIVERG) {
+      moveStop();
+    }
+  } else {
+    // Clear error automatically
+    errorFlags &= ~ERR_SENSOR_DIVERG;
+  }
+
   // Choose one value from two sensors
   if (useAngleSensor == 1) {
     input = angle1;
@@ -321,27 +396,6 @@ void loop() {
     input = angle2;
   } else if (useAngleSensor == 3) {
     // TODO: What if both sensors don't agree?
-    // Handle sensorsConvergeTolerance on two different sensor ranges
-    if (angle1 < 10 && angle2 < 10) {
-      sensorsConvergeTolerance = sensorsConvergeToleranceHighRes;
-    } else {
-      sensorsConvergeTolerance = sensorsConvergeToleranceLowRes;
-    }
-    
-    if (abs(angleDiff) > 1) {
-      logSensorDiff();
-    }
-    if (abs(angleDiff) > sensorsConvergeTolerance) {
-      moveStop();
-      errorFlags |= ERR_SENSOR_DIVERG;      // Set error flag
-      // Log this? Count? Sum time in error? Display message?
-      // TODO: Should only call moveStop() if err flag not already set?
-    } else {
-      // Clear error automatically
-      // TODO: Log this? Count? Sum time in error? Display message?
-      errorFlags &= ~ERR_SENSOR_DIVERG;
-    }
-
     input = (angle1 + angle2)/2.0;
   }
 
@@ -479,9 +533,13 @@ void loop() {
       // lcd.clear();
       redraw = true;
     } else if (key == KEY_DOWN) {
-      // Unused
+      if (screen == SCREEN_ANGLE_READ || screen == SCREEN_USE_ANGLE_SENS) {
+        nextAngleSensor();
+      }
     } else if (key == KEY_UP) {
-      // Unused
+      if (screen == SCREEN_ANGLE_READ || screen == SCREEN_USE_ANGLE_SENS) {
+        prevAngleSensor();
+      }
     } else if (key == KEY_RIGHT) {
       ++screen;
       if (screen > screens - 1) {
@@ -519,7 +577,7 @@ void loop() {
     if (lowering) {
       uiOut |= UI_LDP;
     }
-    if (errorFlags != 0) {
+    if ((errorFlags & controlErrors) != 0) {
       uiOut |= UI_LED1;
     }
     if (!controlEnable) {
@@ -533,7 +591,7 @@ void loop() {
 
     // TODO Disable keypad input on error screen.
 
-    if (screen == 0) {
+    if (screen == SCREEN_PROD_ERR) {
       lcd.setCursor(0, 0); // set the LCD cursor position
       if (errorFlags == 0) {
           lcd.print("PowerWedge v");
@@ -560,7 +618,7 @@ void loop() {
           lcd.print("Err SensDiverged"); lcd.setCursor(0, 1); // next line
         }
       }
-    } else if (screen == 1) {
+    } else if (screen == SCREEN_ANGLE_READ) {
       // Print V1, angle1
       lcd.setCursor(0, 0); // set the LCD cursor position
       lcd.print(v1);
@@ -588,33 +646,19 @@ void loop() {
       }
       lcd.print(angle2);
 
-
-      // Print relay counters
-      lcd.setCursor(12, 0); // set the LCD cursor position
-      // lcd.print("u:");
-      if (abs(upCount) < 100) {
+      // Print selected angle sensors
+      lcd.setCursor(15, 0); // set the LCD cursor position
+      if (useAngleSensor == 1 || useAngleSensor == 3) {
+        lcd.print('*');
+      } else {
         lcd.print(' ');
       }
-      if (abs(upCount) < 10) {
+      lcd.setCursor(15, 1); // set the LCD cursor position
+      if (useAngleSensor == 2 || useAngleSensor == 3) {
+        lcd.print('*');
+      } else {
         lcd.print(' ');
       }
-      if (upCount >= 0) {
-        lcd.print(' ');
-      }
-      lcd.print(upCount);
-
-      lcd.setCursor(12, 1); // set the LCD cursor position
-      // lcd.print(" d:");
-      if (abs(dnCount) < 100) {
-        lcd.print(' ');
-      }
-      if (abs(dnCount) < 10) {
-        lcd.print(' ');
-      }
-      if (dnCount >= 0) {
-        lcd.print(' ');
-      }
-      lcd.print(dnCount);
 
       //  int k = analogRead(A0);            // read the analog in value:
       //  // Print k
@@ -636,7 +680,7 @@ void loop() {
       //    }
       //    lcd.print(k);
       //  }
-    } else if (screen == 2) {
+    } else if (screen == SCREEN_INPUT_VS_SET) {
       // Print setpoint
       lcd.setCursor(0, 0); // set the LCD cursor position
       lcd.print("S");
@@ -689,6 +733,46 @@ void loop() {
       }
       lcd.print(tolerance);
       lcd.print("T");
+    } else if (screen == SCREEN_RELAY_COUNTS) {
+      // Print relay counters
+      lcd.setCursor(0, 0); // set the LCD cursor position
+      lcd.print("Relay    up:");
+      if (abs(upCount) < 100) {
+        lcd.print(' ');
+      }
+      if (abs(upCount) < 10) {
+        lcd.print(' ');
+      }
+      if (upCount >= 0) {
+        lcd.print(' ');
+      }
+      lcd.print(upCount);
+
+      lcd.setCursor(0, 1); // set the LCD cursor position
+      lcd.print("Count    dn:");
+      if (abs(dnCount) < 100) {
+        lcd.print(' ');
+      }
+      if (abs(dnCount) < 10) {
+        lcd.print(' ');
+      }
+      if (dnCount >= 0) {
+        lcd.print(' ');
+      }
+      lcd.print(dnCount);
+    } else if (screen == SCREEN_USE_ANGLE_SENS) {
+      lcd.setCursor(0, 0); // set the LCD cursor position
+      lcd.print("Use AngleSensor:");
+      lcd.setCursor(0, 1); // set the LCD cursor position
+      if (useAngleSensor == 1) {
+        lcd.print("1 Blue      ");
+      } else if (useAngleSensor == 2) {
+        lcd.print("2 Brown     ");
+      } else if (useAngleSensor == 3) {
+        lcd.print("Require Both");
+      } else {
+        lcd.print("Unknown     ");
+      }
     } else {
       lcd.setCursor(0, 0); // set the LCD cursor position
       lcd.print("Unknown screen.");

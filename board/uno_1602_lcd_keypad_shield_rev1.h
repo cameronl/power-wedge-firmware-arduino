@@ -33,5 +33,6 @@
 
 #define setpointEepromAddr  999     // Where to store selected set point. Read on reboot.
                                     // 0-1023 on Arduino Uno
+#define useAngleSensorEepromAddr 998
 
 #endif
