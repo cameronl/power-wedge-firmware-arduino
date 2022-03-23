@@ -145,9 +145,6 @@ bool redraw = true;                 // should redraw the lcd screen
 int screens = 5;
 int screen = 0;
 
-// For debug
-unsigned long loopCount = 0;
-
 // Possible error flags
 #define ERR_BAD_SENSOR1   0b10000000 // Angle sensor out of valid range. Check sensor connection, power.
 #define ERR_BAD_SENSOR2   0b01000000 // Angle sensor out of valid range. Check sensor connection, power.
@@ -280,8 +277,6 @@ void setup() {
 }
 
 void loop() {
-  ++loopCount;
-  
   // Read sensor voltage (averaged to reject noise)
   v1 = readAngleSensorV1();
   v2 = readAngleSensorV2();
@@ -513,10 +508,6 @@ void loop() {
     if (redraw == true) {
       lcd.clear();
     }
-    // For debug, calc stepTime
-    int stepTime = loopCount;
-    loopCount = 0;
-    
     redraw = false;
     tepTimer = millis();
 
@@ -698,30 +689,6 @@ void loop() {
       }
       lcd.print(tolerance);
       lcd.print("T");
-    } else if (screen == 3) {
-      lcd.setCursor(7, 0); // set the LCD cursor position
-      if (controlEnable) {
-        lcd.print(angleToChar(setpoint));
-      } else {
-        lcd.print('_');
-      }
-      lcd.print(' ');
-      lcd.print(angleToChar(input));
-    } else if (screen == 4) {
-      // Print stepTime
-      lcd.setCursor(9, 0); // set the LCD cursor position
-      if (abs(stepTime) < 100) {
-        lcd.print(' ');
-      }
-      if (abs(stepTime) < 10) {
-        lcd.print(' ');
-      }
-      //if (stepTime >= 0) {
-      //  lcd.print(' ');
-      //}
-      lcd.print(stepTime);
-      //lcd.print("ms");
-      lcd.print(" stp");
     } else {
       lcd.setCursor(0, 0); // set the LCD cursor position
       lcd.print("Unknown screen.");
