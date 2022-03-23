@@ -67,7 +67,7 @@ double maxSetpoint = 91.0;          // angle (degrees)
 double minSetpoint = -11.0;         // angle (degrees)
 double sensorsConvergeToleranceHighRes = 1.0; // angle (degrees)
 double sensorsConvergeToleranceLowRes = 10.0; // angle (degrees)
-unsigned long maxRelayOnTime = 10000; // milliseconds
+unsigned long maxRelayOnTime = 15000; // milliseconds
 unsigned long maxRelayCyclesPer  = 6;
 unsigned long maxRelayCyclesTime = 2000; // milliseconds
 
