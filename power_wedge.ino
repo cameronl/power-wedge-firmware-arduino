@@ -106,12 +106,22 @@ uint16_t angleUIChars[] = {
 #define firmwareVersion 0
 
 // #define ENABLE_SERIAL_LOG
+#define ENABLE_SDCARD
 
 // TODO: Store and reference double volts or int millivolts?
 
 #include <EEPROM.h>
 #include "IS31FL3726A.h"
 #include <LiquidCrystal.h>
+
+#ifdef ENABLE_SDCARD
+  #include <SD.h>
+  File logFile;
+  #define log logFile
+#endif
+#ifdef ENABLE_SERIAL_LOG
+  #define log Serial
+#endif
 
 IS31FL3726A seg7(UI_SERIAL_PIN, UI_ENABLE_PIN, UI_LATCH_PIN, UI_CLOCK_PIN);
 LiquidCrystal lcd(LCD_RS_PIN, LCD_EN_PIN, LCD_D0_PIN, LCD_D1_PIN, LCD_D2_PIN, LCD_D3_PIN);
@@ -301,6 +311,15 @@ void setup() {
   seg7.begin();
   lcd.begin(16, 2);
 
+#ifdef ENABLE_SDCARD
+  // Note that even if it's not used as the CS pin, the hardware SS pin 
+  // (10 on most Arduino boards, 53 on the Mega) must be left as an output 
+  // or the SD library functions will not work. 
+  pinMode(SDCARD_CS_PIN, OUTPUT);
+  SD.begin(SDCARD_CS_PIN);
+  logFile = SD.open("log.csv", FILE_WRITE);
+#endif
+
   // Up/down buttons on dash
   pinMode(EN_MANUAL_PIN, INPUT);
   pinMode(BTN_DN_PIN, INPUT);
@@ -474,7 +493,7 @@ void loop() {
   }
   // -------------------------------------------------------------
 
-#ifdef ENABLE_SERIAL_LOG
+#ifdef log
   // Log most recent relay stop
   if (lastRelayStop - lastRelayStopLogged != 0) {
     if (millis() - lastRelayStop > (delayAfterMove * 0.80)) {
@@ -560,6 +579,7 @@ void loop() {
 
     // Log error changes? Count? Sum time in error? Display message?
     // TODO: Should only call moveStop() if err flag not already set?
+    logError();
   }
 
   if (redraw || millis() - tepTimer > 200) {
@@ -835,72 +855,116 @@ KEY readKeyInput() {
   return KEY_NONE;
 }
 
-// Log to serial a move start
+// Log a move start
 void logMoveStart() {
-#ifdef ENABLE_SERIAL_LOG
+#ifdef log
+  log.print(upCount + dnCount);
   if (raising) {
-    if (upCount < 10) {
-      Serial.print('0');
-    }
-    Serial.print(upCount);
-    Serial.print(", UP, ");
+    log.print(",UP, ");
   } else if (lowering) {
-    if (dnCount < 10) {
-      Serial.print('0');
-    }
-    Serial.print(dnCount);
-    Serial.print(", DN, ");
+    log.print(",DN, ");
   } else {
-    Serial.print(", UNKNOWN Movement, ");
+    log.print(",UNKNOWN Movement, ");
   }
   
-  Serial.print(setpoint);
-  Serial.print(", ");
-  Serial.print(input);
-  Serial.print(", ");
-  Serial.print(error);
-  Serial.print(", ");
-  Serial.print(controlEnable ? "" : "MANUAL");
-  Serial.println(", ");
+  log.print(setpoint);
+  log.print(", ");
+  log.print(input);
+  log.print(", ");
+  log.print(error);
+  log.print(", ");
+  log.print(controlEnable ? "" : "MANUAL");
+  log.print(", ");
+#endif
+#ifdef ENABLE_SDCARD
+  if (logFile) {
+    logFile.flush();
+  }
 #endif
 }
 
-// Log to serial a move stop
+// Log a move stop
 void logMoveStop() {
-#ifdef ENABLE_SERIAL_LOG
-  Serial.print(", STOP, ");
-  Serial.print(setpoint);
-  Serial.print(", ");
-  Serial.print(input);
-  Serial.print(", ");
-  Serial.print(error);
-  Serial.print(", ");
-  Serial.print(lastRelayStop - lastRelayStart);
-  Serial.println("ms");
+#ifdef log
+  log.print(",STOP, ");
+  log.print(setpoint);
+  log.print(", ");
+  log.print(input);
+  log.print(", ");
+  log.print(error);
+  log.print(", ");
+  log.print(lastRelayStop - lastRelayStart);
+  // log.println("ms");
+#endif
+#ifdef ENABLE_SDCARD
+  if (logFile) {
+    logFile.flush();
+  }
 #endif
 }
 
-// Log to serial a move done
+// Log a move done
 void logMoveDone() {
-#ifdef ENABLE_SERIAL_LOG
-  Serial.print(", DONE, ");
-  Serial.print(setpoint);
-  Serial.print(", ");
-  Serial.print(input);
-  Serial.print(", ");
-  Serial.print(error);
-  Serial.println(", ");
+#ifdef log
+  log.print(",DONE, ");
+  log.print(setpoint);
+  log.print(", ");
+  log.print(input);
+  log.print(", ");
+  log.print(error);
+  log.println(", ");
+#endif
+#ifdef ENABLE_SDCARD
+  if (logFile) {
+    logFile.flush();
+  }
 #endif
 }
 
-// Log to serial angle sensor difference
+// Log angle sensor difference
 void logSensorDiff() {
-#ifdef ENABLE_SERIAL_LOG
-  Serial.print("Sensor difference: ");
-  Serial.print(angleDiff);
-  Serial.print(" = ");
-  Serial.print(angle1);
-  Serial.print(" - ");
-  Serial.println(angle2);
+#ifdef log
+  log.print("Sensor difference: ");
+  log.print(angleDiff);
+  log.print(" = ");
+  log.print(angle1);
+  log.print(" - ");
+  log.println(angle2);
+#endif
+#ifdef ENABLE_SDCARD
+  if (logFile) {
+    logFile.flush();
+  }
+#endif
+}
+
+// Log Error flags
+void logError() {
+#ifdef log
+  if (errorFlags == 0) {
+    return;
+  }
+  log.print("[");
+  if ((errorFlags & ERR_BAD_SENSOR1) > 0) {
+    log.print("Err Bad Sensor 1 ");
+  }
+  if ((errorFlags & ERR_BAD_SENSOR2) > 0) {
+    log.print("Err Bad Sensor 2 ");
+  }
+  if ((errorFlags & ERR_RELAY_CYCLING) > 0) {
+    log.print("ErrRelay Cycling ");
+  }
+  if ((errorFlags & ERR_RELAY_ON_LONG) > 0) {
+    log.print("Relay On TooLong ");
+  }
+  if ((errorFlags & ERR_SENSOR_DIVERG) > 0) {
+    log.print("Err SensDiverged ");
+  }
+  log.println("]");
+#endif
+#ifdef ENABLE_SDCARD
+  if (logFile) {
+    logFile.flush();
+  }
 #endif
 }

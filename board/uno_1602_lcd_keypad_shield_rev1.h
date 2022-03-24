@@ -31,6 +31,8 @@
 #define LCD_D3_PIN  7
 // LCD backlight is on pin 10 and pulled up by the 1602 LCD shield
 
+#define SDCARD_CS_PIN 10  // Chip select pin for SD Card. ^Shared with LCD backlight..
+
 #define setpointEepromAddr  999     // Where to store selected set point. Read on reboot.
                                     // 0-1023 on Arduino Uno
 #define useAngleSensorEepromAddr 998
