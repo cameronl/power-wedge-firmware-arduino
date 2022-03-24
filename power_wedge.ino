@@ -17,7 +17,7 @@
 // Separate calibration for each angle sensor...
 
 // Calibration: angle sensor 1 -- voltage to angle
-int numCalibPoints1 = 8; // match next line
+const int numCalibPoints1 = 8; // match next line
 coord_t voltToAngle1[8] = 
 {
     {0.0000, -15},
@@ -31,7 +31,7 @@ coord_t voltToAngle1[8] =
 };
 
 // Calibration: angle sensor 2 -- voltage to angle
-int numCalibPoints2 = 8; // match next line
+const int numCalibPoints2 = 8; // match next line
 coord_t voltToAngle2[8] = 
 {
     {0.0000, -15},
@@ -44,44 +44,44 @@ coord_t voltToAngle2[8] =
     {5.2573, 240}
 };
 
-double toleranceHighRes = 1.0; // +/- angle (degrees)
-double toleranceLowRes = 5.0; // +/- angle (degrees)
+const double toleranceHighRes = 1.0; // +/- angle (degrees)
+const double toleranceLowRes = 5.0; // +/- angle (degrees)
 
 // Additional angle (overshoot) due to relay turn off delay, etc.
-double stopTimeUp = 0.7; // angle (degrees)
-double stopTimeDn = 0.7; // angle (degrees)
+const double stopTimeUp = 0.7; // angle (degrees)
+const double stopTimeDn = 0.7; // angle (degrees)
 
 // Time to wait after movement for relay to turn off and movement to settle
-unsigned long delayAfterMove = 200; // milliseconds
+const unsigned long delayAfterMove = 200; // milliseconds
 
 // List of user selectable set points
-int userSetpointLen = 8;
-double userSetpoints[] = {
+const int userSetpointLen = 8;
+const double userSetpoints[] = {
   85, 9, 6, 3, 0, -4, -8, -10  // angle (degrees) // Avoids sensor transition area at 10 deg
   // 10, -10  // angle (degrees)
   // 85, 20, 15, 14, 13, 12, 11, 10, 9, 6, 3, 0, -4, -8, -10  // angle (degrees)  // Highlights PROBLEM TOLERANCE near 10 deg
 };
 
 // Safety / Error limits
-double maxSetpoint = 91.0;          // angle (degrees)
-double minSetpoint = -11.0;         // angle (degrees)
-double sensorsConvergeToleranceHighRes = 1.0; // angle (degrees)
-double sensorsConvergeToleranceLowRes = 10.0; // angle (degrees)
-unsigned long maxRelayOnTime = 15000; // milliseconds
-unsigned long maxRelayCyclesPer  = 6;
-unsigned long maxRelayCyclesTime = 2000; // milliseconds
+const double maxSetpoint = 91.0;          // angle (degrees)
+const double minSetpoint = -11.0;         // angle (degrees)
+const double sensorsConvergeToleranceHighRes = 1.0; // angle (degrees)
+const double sensorsConvergeToleranceLowRes = 10.0; // angle (degrees)
+const unsigned long maxRelayOnTime = 15000; // milliseconds
+const unsigned long maxRelayCyclesPer  = 6;
+const unsigned long maxRelayCyclesTime = 2000; // milliseconds
 
 // Convert wedge angle to single character for display
-int angleToCharThresholdLen = 16;
-double angleToCharThreshold[] = {
+const int angleToCharThresholdLen = 16;
+const double angleToCharThreshold[] = {
   80, 70, 60, 50, 40, 30, 20, 12, 8, 4.5, 1.5, -1.5, -6, -9, -11, -90
 };
 /// For printing to LCD
-char angleChars[] = {
+const char angleChars[] = {
   'F', 'E', 'd', 'c', 'b', 'A', '9', '8', '7', '6', '5', '4', '3', '2', '1', '0'
 };
 /// Outputs for UI 7-segment display
-uint16_t angleUIChars[] = {
+const uint16_t angleUIChars[] = {
   UICHAR_F,
   UICHAR_E,
   UICHAR_D,
@@ -150,8 +150,8 @@ unsigned long lastRealKeyTime = 0;  // last time key changed (for debounce)
 unsigned long debounceDelay = 50;   // the debounce time; increase if the output flickers
 
 bool redraw = true;                 // should redraw the lcd screen
-int screens = 5;
-int screen = 0;
+const uint8_t screens = 5;
+uint8_t screen = 0;
 #define SCREEN_PROD_ERR 0
 #define SCREEN_ANGLE_READ 1
 #define SCREEN_INPUT_VS_SET 2
@@ -184,7 +184,7 @@ unsigned long relayCycleTimer = 0;  // last check of relay cycling
 double v1, v2;                      // Current sensor voltage
 double angle1, angle2, angleDiff;   // Current sensor calibrated angle
 
-double setpoint, input, output;
+double setpoint, input;
 double error;
 double tolerance;
 double sensorsConvergeTolerance;
@@ -546,7 +546,7 @@ void loop() {
       // Unused
     } else if (key == KEY_LEFT) {
       --screen;
-      if (screen < 0) {
+      if (screen < 0 || screen > 200) {
         screen = screens - 1; // wrap around
       }
       // lcd.clear();
