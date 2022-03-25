@@ -981,19 +981,19 @@ void logError() {
   }
   log.print("[");
   if ((errorFlags & ERR_BAD_SENSOR1) > 0) {
-    log.print("Err Bad Sensor 1 ");
+    log.print("Err_Bad_Sensor_1 ");
   }
   if ((errorFlags & ERR_BAD_SENSOR2) > 0) {
-    log.print("Err Bad Sensor 2 ");
+    log.print("Err_Bad_Sensor_2 ");
   }
   if ((errorFlags & ERR_RELAY_CYCLING) > 0) {
-    log.print("ErrRelay Cycling ");
+    log.print("ErrRelay_Cycling ");
   }
   if ((errorFlags & ERR_RELAY_ON_LONG) > 0) {
-    log.print("Relay On TooLong ");
+    log.print("Relay_On_TooLong ");
   }
   if ((errorFlags & ERR_SENSOR_DIVERG) > 0) {
-    log.print("Err SensDiverged ");
+    log.print("Err_SensDiverged ");
   }
   log.println("]");
 #endif
