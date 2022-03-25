@@ -235,6 +235,16 @@ void onAngleSensorChange() {
 
   // Save this config choice in EEPROM
   EEPROM.update(useAngleSensorEepromAddr, useAngleSensor & 0xFF);
+
+#ifdef log
+  log.print("NEW,useAngleSensor, ");
+  log.println(useAngleSensor);
+#endif
+#ifdef ENABLE_SDCARD
+  if (logFile) {
+    logFile.flush();
+  }
+#endif
 }
 
 void prevSetpoint() {
@@ -255,6 +265,12 @@ void nextSetpoint() {
 
 void goToUserSetpoint(int index) {
   setpoint = userSetpoints[index];
+
+#ifdef log
+  log.print("NEW,setpoint, ");
+  log.print(setpoint);
+  log.print(", ");
+#endif
   // Limit setpoint min/max safe angle
   if (setpoint > maxSetpoint) {
     setpoint = maxSetpoint;
@@ -264,6 +280,15 @@ void goToUserSetpoint(int index) {
   }
   // TODO Further sanity check setpoint results in valid voltage?
   EEPROM.update(setpointEepromAddr, index & 0xFF);
+
+#ifdef log
+  log.println(setpoint);
+#endif
+#ifdef ENABLE_SDCARD
+  if (logFile) {
+    logFile.flush();
+  }
+#endif
 }
 
 // Initiate movement up
@@ -332,6 +357,15 @@ void setup() {
   pinMode(RELAY_UP_PIN, OUTPUT);
   pinMode(RELAY_DN_PIN, OUTPUT);
   // moveStop();
+
+#ifdef log
+  log.println("BOOTING,,,");
+#endif
+#ifdef ENABLE_SDCARD
+  if (logFile) {
+    logFile.flush();
+  }
+#endif
 
   useAngleSensor = EEPROM.read(useAngleSensorEepromAddr);
   if (useAngleSensor > 3 || useAngleSensor < 1) {
