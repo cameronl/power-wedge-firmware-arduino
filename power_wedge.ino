@@ -67,6 +67,7 @@ const double maxSetpoint = 91.0;          // angle (degrees)
 const double minSetpoint = -11.0;         // angle (degrees)
 const double sensorsConvergeToleranceHighRes = 1.0; // angle (degrees)
 const double sensorsConvergeToleranceLowRes = 10.0; // angle (degrees)
+const double sensorTransistionAngle = 10.0; // angle (degrees) High-res to Low-res
 const unsigned long maxRelayOnTime = 15000; // milliseconds
 const unsigned long maxRelayCyclesPer  = 6;
 const unsigned long maxRelayCyclesTime = 2000; // milliseconds
@@ -393,7 +394,7 @@ void loop() {
 
   // Check if both sensors agree
   // Handle sensorsConvergeTolerance on two different sensor ranges
-  if (angle1 < 10 && angle2 < 10) {
+  if (angle1 < sensorTransistionAngle && angle2 < sensorTransistionAngle) {
     sensorsConvergeTolerance = sensorsConvergeToleranceHighRes;
   } else {
     sensorsConvergeTolerance = sensorsConvergeToleranceLowRes;
@@ -420,7 +421,7 @@ void loop() {
 
   // Handle tolerance on two different sensor ranges
   // if (input < 17.0) {
-  if (input < 10.0 || setpoint < 10.0) {
+  if (input < sensorTransistionAngle || setpoint < sensorTransistionAngle) {
     tolerance = toleranceHighRes;
   } else {
     tolerance = toleranceLowRes;
