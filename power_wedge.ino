@@ -56,8 +56,8 @@ const unsigned long delayAfterMove = 200; // milliseconds
 
 // List of user selectable set points
 const int userSetpointLen = 8;
-const double userSetpoints[] = {
-  85, 9, 6, 3, 0, -4, -8, -10  // angle (degrees) // Avoids sensor transition area at 10 deg
+double userSetpoints[] = {
+  80, 9, 6, 3, 0, -4, -8, -10  // angle (degrees) // Avoids sensor transition area at 10 deg
   // 10, -10  // angle (degrees)
   // 85, 20, 15, 14, 13, 12, 11, 10, 9, 6, 3, 0, -4, -8, -10  // angle (degrees)  // Highlights PROBLEM TOLERANCE near 10 deg
 };
@@ -151,13 +151,14 @@ unsigned long lastRealKeyTime = 0;  // last time key changed (for debounce)
 unsigned long debounceDelay = 50;   // the debounce time; increase if the output flickers
 
 bool redraw = true;                 // should redraw the lcd screen
-const uint8_t screens = 5;
+const uint8_t screens = 6;
 uint8_t screen = 0;
 #define SCREEN_PROD_ERR 0
 #define SCREEN_ANGLE_READ 1
 #define SCREEN_INPUT_VS_SET 2
 #define SCREEN_RELAY_COUNTS 3
 #define SCREEN_USE_ANGLE_SENS 4
+#define SCREEN_SET_PARK_ANGLE 5
 
 // Possible error flags
 #define ERR_BAD_SENSOR1   0b10000000 // Angle sensor out of valid range. Check sensor connection, power.
@@ -192,6 +193,49 @@ double sensorsConvergeTolerance;
 
 int userSetpointIndex;              // Current position in list of user setpoints
 uint8_t useAngleSensor;             // Which angle sensor to use?
+
+// Increment park angle
+void upAngleParkAngle() {
+  userSetpoints[0]++;
+  onParkAngleChange();
+}
+
+// Decrement park angle
+void downAngleParkAngle() {
+  userSetpoints[0]--;
+  onParkAngleChange();
+}
+
+// Call when there is a change to park angle.
+void onParkAngleChange() {
+#ifdef log
+  log.print("NEW,parkAngle, ");
+  log.print(userSetpoints[0]);
+  log.print(", ");
+#endif
+  if (userSetpoints[0] > maxSetpoint) {
+    userSetpoints[0] = maxSetpoint; // Clamp to max
+  }
+  // Negative numbers not supported in eeprom correctly yet?
+  if (userSetpoints[0] < 0.0) {
+    userSetpoints[0] = 0.0;         // Clamp to positive
+  }
+  if (userSetpoints[0] < minSetpoint) {
+    userSetpoints[0] = minSetpoint; // Clamp to min
+  }
+
+  // Save this config choice in EEPROM
+  EEPROM.update(parkAngleEepromAddr, ((int)userSetpoints[0]) & 0xFF);
+
+#ifdef log
+  log.println(userSetpoints[0]);
+#endif
+#ifdef ENABLE_SDCARD
+  if (logFile) {
+    logFile.flush();
+  }
+#endif
+}
 
 void prevAngleSensor() {
   useAngleSensor--;
@@ -367,11 +411,20 @@ void setup() {
   }
 #endif
 
+  //
+  // Load config
+  //
+
+  // Use angle sensor
   useAngleSensor = EEPROM.read(useAngleSensorEepromAddr);
   if (useAngleSensor > 3 || useAngleSensor < 1) {
     useAngleSensor = 1; // Default to sensor 1
   }
   onAngleSensorChange();
+
+  // Park angle
+  userSetpoints[0] = (double) EEPROM.read(parkAngleEepromAddr);
+  onParkAngleChange();
 
   // What if MCU reboots? Don't want setpoint to jump. Store/load it from flash.
   // Currently storing index in list of user setpoints -- NOT the actual angle/voltage.
@@ -589,10 +642,14 @@ void loop() {
     } else if (key == KEY_DOWN) {
       if (screen == SCREEN_ANGLE_READ || screen == SCREEN_USE_ANGLE_SENS) {
         nextAngleSensor();
+      } else if (screen = SCREEN_SET_PARK_ANGLE) {
+        downAngleParkAngle();
       }
     } else if (key == KEY_UP) {
       if (screen == SCREEN_ANGLE_READ || screen == SCREEN_USE_ANGLE_SENS) {
         prevAngleSensor();
+      } else if (screen = SCREEN_SET_PARK_ANGLE) {
+        upAngleParkAngle();
       }
     } else if (key == KEY_RIGHT) {
       ++screen;
@@ -828,6 +885,12 @@ void loop() {
       } else {
         lcd.print("Unknown     ");
       }
+    } else if (screen == SCREEN_SET_PARK_ANGLE) {
+      lcd.setCursor(0, 0); // set the LCD cursor position
+      lcd.print("Park Angle:");
+      lcd.setCursor(0, 1); // set the LCD cursor position
+      lcd.print(userSetpoints[0]);
+      // TODO single/double digit
     } else {
       lcd.setCursor(0, 0); // set the LCD cursor position
       lcd.print("Unknown screen.");
