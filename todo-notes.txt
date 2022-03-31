@@ -117,3 +117,20 @@ cable glands and connnectors to make wiring harness
 
 - Which error flags to worry about?
 - What needs to be in config vs. hard-coded?
+- 7seg display update interval/rate.
+
+TODO Add a screen to give sd card success / failure info?
+TODO Enable/disable log?  I think best to just leave it enabled.
+
+TODO Log on angle sensor change?
+TODO Log on user setpoint change
+TODO Log on mounting angle offset calibration change.
+TODO Any other calibration?
+TODO Log on control inhibiting errors, all errors
+
+## Issues (Future Improvements)
+
+1. Using SD Card requires +1007 bytes of RAM. Arduino Uno max total is 2048. Upgrade MCU.
+1. Control board PCB fixes (bodge wires, added resistors)
+1. 7-segment display UI PCB fixes (led 1&2 position, header position, thinner if flip board)
+1. Fit into smaller enclosure
