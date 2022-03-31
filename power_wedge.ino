@@ -608,11 +608,11 @@ void loop() {
       // Ignore
       // OPTION Log this?
     } else if (btnDn) {
-      if (controlEnable) {
+      if (controlEnable && (errorFlags & controlErrors) == 0) {
         prevSetpoint();
       }
     } else if (btnUp) {
-      if (controlEnable) {
+      if (controlEnable && (errorFlags & controlErrors) == 0) {
         nextSetpoint();
       }
     }
