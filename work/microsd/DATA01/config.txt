@@ -1,0 +1,13 @@
+# for comments
+setting=value
+
+# this is an example
+
+# for any string
+setting1=some_string
+# able to be parsed as a boolean
+setting2=true
+# able to be parsed as an integer
+setting3=123
+# able to be parsed as an IP address
+setting4=10.1.1.2
