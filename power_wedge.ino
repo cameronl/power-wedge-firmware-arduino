@@ -691,8 +691,8 @@ void loop() {
     if (lowering) {
       uiOut |= UI_LDP;
     }
-    if (!controlEnable) {
-      uiOut |= UI_LED2;
+    if (!controlEnable) { // Manual mode
+      uiOut |= UI_LDP | UI_RDP; // Both ON solid during manual mode.
     }
     seg7.set(uiOut);
 
