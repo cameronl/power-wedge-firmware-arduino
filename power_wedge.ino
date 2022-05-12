@@ -150,6 +150,8 @@ unsigned long dashBtnRepeatDelay = 800;  // time (ms) before repeating button if
 unsigned long lastRealKeyTime = 0;  // last time key changed (for debounce)
 unsigned long debounceDelay = 50;   // the debounce time; increase if the output flickers
 
+uint8_t uiFlashCounter = 0;         // Used in flashing the 7-segment display
+
 bool redraw = true;                 // should redraw the lcd screen
 const uint8_t screens = 6;
 uint8_t screen = 0;
@@ -689,13 +691,19 @@ void loop() {
     if (lowering) {
       uiOut |= UI_LDP;
     }
-    if ((errorFlags & controlErrors) != 0) {
-      uiOut |= UI_LED1;
-    }
     if (!controlEnable) {
       uiOut |= UI_LED2;
     }
     seg7.set(uiOut);
+
+    // If control error, flash 7-segment UI
+    if ((errorFlags & controlErrors) != 0) {
+      if (++uiFlashCounter%2 == 0) {
+        seg7.displayOn();
+      } else {
+        seg7.displayOff();
+      }
+    }
 
     // seg7.set(UICHAR_4 | UISIG_ERROR);
     // seg7.set(UICHAR_F | UISIG_ACTIVE);
