@@ -640,13 +640,13 @@ void loop() {
       // lcd.clear();
       redraw = true;
     } else if (key == KEY_DOWN) {
-      if (screen == SCREEN_ANGLE_READ || screen == SCREEN_USE_ANGLE_SENS) {
+      if (screen == SCREEN_USE_ANGLE_SENS) {
         nextAngleSensor();
       } else if (screen = SCREEN_SET_PARK_ANGLE) {
         downAngleParkAngle();
       }
     } else if (key == KEY_UP) {
-      if (screen == SCREEN_ANGLE_READ || screen == SCREEN_USE_ANGLE_SENS) {
+      if (screen == SCREEN_USE_ANGLE_SENS) {
         prevAngleSensor();
       } else if (screen = SCREEN_SET_PARK_ANGLE) {
         upAngleParkAngle();
