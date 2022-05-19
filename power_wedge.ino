@@ -135,7 +135,7 @@ double v1, v2;                      // Current sensor voltage
 double angle1, angle2, angleDiff;   // Current sensor calibrated angle
 
 double setpoint, input;
-double error;
+double delta;                       // Current position difference from setpoint (input - setpoint)
 double tolerance;
 double sensorsConvergeTolerance;
 
@@ -495,7 +495,7 @@ void loop() {
 
   // -------------------------------------------------------------
   // Control
-  error = input - setpoint;
+  delta = input - setpoint;
   if (controlEnable && (errorFlags & controlErrors) == 0) {
     // Bang-bang control with hysteresis
     if (raising) {
@@ -513,9 +513,9 @@ void loop() {
         moveStop();
       }
     } else {
-      // Only move if: error > tolerance AND been long enough after a move
-      if (abs(error) > tolerance && millis() - lastRelayStop > delayAfterMove) {
-        if (error > 0) {
+      // Only move if: delta > tolerance AND been long enough after a move
+      if (abs(delta) > tolerance && millis() - lastRelayStop > delayAfterMove) {
+        if (delta > 0) {
           moveLower();
         } else {
           moveRaise();
@@ -757,19 +757,19 @@ void loop() {
        lcd.print(' ');
       }
       lcd.print(setpoint);
-      // Print error
+      // Print delta
       // lcd.setCursor(0, 0); // set the LCD cursor position
-      if (abs(error) < 100) {
+      if (abs(delta) < 100) {
         lcd.print(' ');
       }
-      if (abs(error) < 10) {
+      if (abs(delta) < 10) {
         lcd.print(' ');
       }
-      if (error >= 0) {
+      if (delta >= 0) {
        lcd.print(' ');
       }
-      lcd.print(error);
-      lcd.print("E");
+      lcd.print(delta);
+      lcd.print("D");
       // Print input
       lcd.setCursor(0, 1); // set the LCD cursor position
       lcd.print("I");
@@ -920,7 +920,7 @@ void logMoveStart() {
   log.print(", ");
   log.print(input);
   log.print(", ");
-  log.print(error);
+  log.print(delta);
   log.print(", ");
   log.print(controlEnable ? "" : "MANUAL");
   log.print(", ");
@@ -940,7 +940,7 @@ void logMoveStop() {
   log.print(", ");
   log.print(input);
   log.print(", ");
-  log.print(error);
+  log.print(delta);
   log.print(", ");
   log.print(lastRelayStop - lastRelayStart);
   // log.println("ms");
@@ -960,7 +960,7 @@ void logMoveDone() {
   log.print(", ");
   log.print(input);
   log.print(", ");
-  log.print(error);
+  log.print(delta);
   log.println(", ");
 #endif
 #ifdef ENABLE_SDCARD
