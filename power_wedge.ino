@@ -72,6 +72,13 @@ const unsigned long maxRelayOnTime = 15000; // milliseconds
 const unsigned long maxRelayCyclesPer  = 6;
 const unsigned long maxRelayCyclesTime = 2000; // milliseconds
 
+// Angle sensor error thresholds; Angle sensor valid range
+// Don't use this to limit movement (use maxSetpoint or something else).
+const double vMinValidSensor1 = 0.30; // minimum valid sensor1 voltage
+const double vMaxValidSensor1 = 4.70; // maximum valid sensor1 voltage
+const double vMinValidSensor2 = 0.30; // minimum valid sensor2 voltage
+const double vMaxValidSensor2 = 4.65; // maximum valid sensor2 voltage
+
 // Convert wedge angle to single character for display
 const int angleToCharThresholdLen = 16;
 const double angleToCharThreshold[] = {
@@ -451,11 +458,8 @@ void loop() {
   v1 = v1/6.0;
   v2 = v2/6.0;
 
-  // Sanity check input for:
-  //   Angle sensor out of valid range
-  //   Check sensor connection, power.
-  // Don't use this to limit movement (use maxSetpoint or something else).
-  if (v1 < 0.30 || v1 > 4.70) {
+  // Sanity check. Raise error if input is not in sensor's valid range
+  if (v1 < vMinValidSensor1 || v1 > vMaxValidSensor1) {
     errorFlags |= ERR_BAD_SENSOR1;      // Set error flag
     if (controlErrors & ERR_BAD_SENSOR1) {
       moveStop();
@@ -464,7 +468,7 @@ void loop() {
     // Clear error automatically
     errorFlags &= ~ERR_BAD_SENSOR1;
   }
-  if (v2 < 0.30 || v2 > 4.65) {
+  if (v2 < vMinValidSensor2 || v2 > vMaxValidSensor2) {
     errorFlags |= ERR_BAD_SENSOR2;      // Set error flag
     if (controlErrors & ERR_BAD_SENSOR2) {
       moveStop();
