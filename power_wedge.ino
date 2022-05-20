@@ -6,6 +6,7 @@
  */
 
 #include "board/uno_1602_lcd_keypad_shield_rev1.h"
+// #include "board/uno_1602_lcd_keypad_shield_rev2dev.h"
 //#include "board/huzzah32_power_wedge_control_rev0.h"
 #include "wedge/wedge1.h"
 // #include "wedge/z_fake_wedge.h"
