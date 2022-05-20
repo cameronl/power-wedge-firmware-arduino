@@ -646,13 +646,13 @@ void loop() {
     } else if (key == KEY_DOWN) {
       if (screen == SCREEN_USE_ANGLE_SENS) {
         nextAngleSensor();
-      } else if (screen = SCREEN_SET_PARK_ANGLE) {
+      } else if (screen == SCREEN_SET_PARK_ANGLE) {
         downAngleParkAngle();
       }
     } else if (key == KEY_UP) {
       if (screen == SCREEN_USE_ANGLE_SENS) {
         prevAngleSensor();
-      } else if (screen = SCREEN_SET_PARK_ANGLE) {
+      } else if (screen == SCREEN_SET_PARK_ANGLE) {
         upAngleParkAngle();
       }
     } else if (key == KEY_RIGHT) {
