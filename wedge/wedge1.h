@@ -50,6 +50,8 @@ const unsigned long delayAfterMove = 200; // milliseconds
 // Safety / Error limits
 const double maxSetpoint = 91.0;          // angle (degrees)
 const double minSetpoint = -11.0;         // angle (degrees)
+const double maxParkAngle = 120.0;        // angle (degrees)
+const double minParkAngle = 0.0;          // angle (degrees)
 const double sensorsConvergeToleranceHighRes = 1.0; // angle (degrees)
 const double sensorsConvergeToleranceLowRes = 10.0; // angle (degrees)
 const double sensorTransistionAngle = 10.0; // angle (degrees) High-res to Low-res
@@ -63,5 +65,11 @@ const double vMinValidSensor1 = 0.30; // minimum valid sensor1 voltage
 const double vMaxValidSensor1 = 4.70; // maximum valid sensor1 voltage
 const double vMinValidSensor2 = 0.30; // minimum valid sensor2 voltage
 const double vMaxValidSensor2 = 4.65; // maximum valid sensor2 voltage
+
+// Time to drive beyond end of angle sensor when "going off the map"
+// to extend the range of the power wedge beyond what the sensor can read
+const unsigned long overdriveUpTime  = 1000; // milliseconds
+const unsigned long overdriveDnTime  = 1000; // milliseconds
+// const unsigned long overdriveTimeout = 5000; // milliseconds
 
 #endif

@@ -13,7 +13,7 @@
 // List of user selectable set points
 const int userSetpointLen = 8;
 double userSetpoints[] = {
-  80, 9, 6, 3, 0, -4, -8, -10  // angle (degrees) // Avoids sensor transition area at 10 deg
+  80, 9, 6, 3, 0, -4, -8, -15  // angle (degrees) // Avoids sensor transition area at 10 deg
   // 10, -10  // angle (degrees)
   // 85, 20, 15, 14, 13, 12, 11, 10, 9, 6, 3, 0, -4, -8, -10  // angle (degrees)  // Highlights PROBLEM TOLERANCE near 10 deg
 };
@@ -121,6 +121,11 @@ uint8_t errorFlags = 0;             // Errors which are currently occurring
 uint8_t lastErrorFlags = 0;         // For detecting when error flags change
 uint8_t controlErrors = 0xFF;       // Bitmask indicating which errors inhibit control
 bool raising, lowering = false;
+bool overdrive = false;             // Is off-the-map mode active.
+                                    // Wedge is driven off the end of the angle sensor
+                                    // so don't try to move or follow the angle sensor.
+bool offMapHighRequested = false;   // Request to drive off the map, but the move is not complete yet.
+bool offMapLowRequested = false;    // Request to drive off the map, but the move is not complete yet.
 
 // For checking relay cycling too frequently or on too long
 unsigned long lastRelayStart = 0;   // last time a relay turned ON
@@ -142,6 +147,12 @@ double sensorsConvergeTolerance;
 int userSetpointIndex;              // Current position in list of user setpoints
 uint8_t useAngleSensor;             // Which angle sensor to use?
 
+// Set overdrive mode (true/false) and store in EEPROM
+void setOverdrive(bool newVal = true) {
+  overdrive = newVal;
+  EEPROM.update(overdriveEepromAddr, newVal);
+}
+
 // Increment park angle
 void upAngleParkAngle() {
   userSetpoints[0]++;
@@ -161,15 +172,15 @@ void onParkAngleChange() {
   log.print(userSetpoints[0]);
   log.print(", ");
 #endif
-  if (userSetpoints[0] > maxSetpoint) {
-    userSetpoints[0] = maxSetpoint; // Clamp to max
+  if (userSetpoints[0] > maxParkAngle) {
+    userSetpoints[0] = maxParkAngle; // Clamp to max
   }
   // Negative numbers not supported in eeprom correctly yet?
   if (userSetpoints[0] < 0.0) {
     userSetpoints[0] = 0.0;         // Clamp to positive
   }
-  if (userSetpoints[0] < minSetpoint) {
-    userSetpoints[0] = minSetpoint; // Clamp to min
+  if (userSetpoints[0] < minParkAngle) {
+    userSetpoints[0] = minParkAngle; // Clamp to min
   }
 
   // Save this config choice in EEPROM
@@ -265,9 +276,19 @@ void goToUserSetpoint(int index) {
 #endif
   // Limit setpoint min/max safe angle
   if (setpoint > maxSetpoint) {
+    // Destination is off-the-map high
+    offMapHighRequested = true;
+    offMapLowRequested = false;
     setpoint = maxSetpoint;
-  }
-  if (setpoint < minSetpoint) {
+  } else if (setpoint >= minSetpoint) {
+    // Normal position readable by angle sensor
+    offMapHighRequested = false;
+    offMapLowRequested = false;
+    setOverdrive(false);
+  } else {
+    // Destination is off-the-map low
+    offMapHighRequested = false;
+    offMapLowRequested = true;
     setpoint = minSetpoint;
   }
   // TODO Further sanity check setpoint results in valid voltage?
@@ -319,6 +340,28 @@ void moveStop() {
   }
 }
 
+/// Drive off the readable end of angle sensor.
+void overDriveHigh() {
+  // moveStop();
+  offMapHighRequested = false;
+  offMapLowRequested = false;
+  setOverdrive(true);
+  moveRaise();
+  delay(overdriveUpTime);
+  moveStop();
+}
+
+/// Drive off the readable end of angle sensor.
+void overDriveLow() {
+  // moveStop();
+  offMapHighRequested = false;
+  offMapLowRequested = false;
+  setOverdrive(true);
+  moveLower();
+  delay(overdriveDnTime);
+  moveStop();
+}
+
 void setup() {
 #ifdef ENABLE_SERIAL_LOG
   // Serial.begin(9600);
@@ -362,6 +405,8 @@ void setup() {
   //
   // Load config
   //
+
+  overdrive = EEPROM.read(overdriveEepromAddr);
 
   // Use angle sensor
   useAngleSensor = EEPROM.read(useAngleSensorEepromAddr);
@@ -496,7 +541,7 @@ void loop() {
   // -------------------------------------------------------------
   // Control
   delta = input - setpoint;
-  if (controlEnable && (errorFlags & controlErrors) == 0) {
+  if (controlEnable && (errorFlags & controlErrors) == 0 && !overdrive) {
     // Bang-bang control with hysteresis
     if (raising) {
       if (input < setpoint - stopTimeUp) {
@@ -513,15 +558,29 @@ void loop() {
         moveStop();
       }
     } else {
-      // Only move if: delta > tolerance AND been long enough after a move
-      if (abs(delta) > tolerance && millis() - lastRelayStop > delayAfterMove) {
-        if (delta > 0) {
-          moveLower();
+      if (millis() - lastRelayStop > delayAfterMove) {
+        // It has been long enough after a move, so the move had time to settle.
+        if (abs(delta) > tolerance) {
+          if (delta > 0) {
+            moveLower();
+          } else {
+            moveRaise();
+          }
         } else {
-          moveRaise();
+          // Do nothing. We're within tolerance of setpoint.
+
+          // Extra off-the-map mode:
+          // 1. We're within tolerance of the setpoint
+          // 2. If off-the-map was requested, setpoint will be set to min or max
+          // 3. So we're currently at that min or max setpoint
+          // 4. Trigger overdrive
+          if (offMapHighRequested) {
+            overDriveHigh();
+          } else if (offMapLowRequested) {
+            overDriveLow();
+          }
         }
       }
-      // Do nothing. We're within tolerance of setpoint.
     }
   }
   // -------------------------------------------------------------
@@ -922,7 +981,8 @@ void logMoveStart() {
   log.print(", ");
   log.print(delta);
   log.print(", ");
-  log.print(controlEnable ? "" : "MANUAL");
+  log.print(controlEnable ? "" : " MANUAL");
+  log.print(overdrive ? " OVERDRIVE" : "");
   log.print(", ");
 #endif
 #ifdef ENABLE_SDCARD
@@ -960,8 +1020,7 @@ void logMoveDone() {
   log.print(", ");
   log.print(input);
   log.print(", ");
-  log.print(delta);
-  log.println(", ");
+  log.println(delta);
 #endif
 #ifdef ENABLE_SDCARD
   if (logFile) {

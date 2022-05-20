@@ -37,5 +37,6 @@
                                     // 0-1023 on Arduino Uno
 #define useAngleSensorEepromAddr 998
 #define parkAngleEepromAddr 997
+#define overdriveEepromAddr 996
 
 #endif
