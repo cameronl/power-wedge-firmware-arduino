@@ -598,7 +598,272 @@ void loop() {
   }
 #endif
 
-  // Handle dash buttons
+  handleDashButtons();
+  handleKeypadButtons();
+
+  // LCD clear screen is slow, so only do so when something changes
+  if (errorFlags != lastErrorFlags) {
+    lastErrorFlags = errorFlags;
+    // A change
+    redraw = true;
+
+    // Log error changes? Count? Sum time in error? Display message?
+    // TODO: Should only call moveStop() if err flag not already set?
+    logError();
+  }
+
+  if (redraw || millis() - tepTimer > 200) {
+    if (redraw == true) {
+      lcd.clear();
+    }
+    redraw = false;
+    tepTimer = millis();
+
+    update7SegDisplay();
+    updateLcd();
+  }
+}
+
+// Show LCD screens
+void updateLcd() {
+  if (screen == SCREEN_PROD_ERR) {
+    lcd.setCursor(0, 0); // set the LCD cursor position
+    if (errorFlags == 0) {
+        lcd.print("PowerWedge v");
+        lcd.print(modelVersion);
+        lcd.print('.');
+        lcd.print(firmwareVersion);
+        lcd.setCursor(3, 1); // set the LCD cursor position
+        lcd.print("No Errors");
+    } else {
+      // One error per line, can only show two.
+      if ((errorFlags & ERR_BAD_SENSOR1) > 0) {
+        lcd.print("Err Bad Sensor 1"); lcd.setCursor(0, 1); // next line
+      }
+      if ((errorFlags & ERR_BAD_SENSOR2) > 0) {
+        lcd.print("Err Bad Sensor 2"); lcd.setCursor(0, 1); // next line
+      }
+      if ((errorFlags & ERR_RELAY_CYCLING) > 0) {
+        lcd.print("ErrRelay Cycling"); lcd.setCursor(0, 1); // next line
+      }
+      if ((errorFlags & ERR_RELAY_ON_LONG) > 0) {
+        lcd.print("Relay On TooLong"); lcd.setCursor(0, 1); // next line
+      }
+      if ((errorFlags & ERR_SENSOR_DIVERG) > 0) {
+        lcd.print("Err SensDiverged"); lcd.setCursor(0, 1); // next line
+      }
+    }
+  } else if (screen == SCREEN_ANGLE_READ) {
+    // Print V1, angle1
+    lcd.setCursor(0, 0); // set the LCD cursor position
+    lcd.print(v1);
+    lcd.print("V ");
+
+    if (abs(angle1) < 10) {
+      lcd.print(' ');
+    }
+    if (angle1 >= 0) {
+      lcd.print(' ');
+    }
+    lcd.print(angle1);
+
+
+    // Print V2, angle2
+    lcd.setCursor(0, 1); // set the LCD cursor position
+    lcd.print(v2);
+    lcd.print("V ");
+
+    if (abs(angle2) < 10) {
+      lcd.print(' ');
+    }
+    if (angle2 >= 0) {
+      lcd.print(' ');
+    }
+    lcd.print(angle2);
+
+    // Print selected angle sensors
+    lcd.setCursor(15, 0); // set the LCD cursor position
+    if (useAngleSensor == 1 || useAngleSensor == 3) {
+      lcd.print('*');
+    } else {
+      lcd.print(' ');
+    }
+    lcd.setCursor(15, 1); // set the LCD cursor position
+    if (useAngleSensor == 2 || useAngleSensor == 3) {
+      lcd.print('*');
+    } else {
+      lcd.print(' ');
+    }
+
+    //  int k = analogRead(A0);            // read the analog in value:
+    //  // Print k
+    //  lcd.setCursor(7, 1); // set the LCD cursor position
+    //  if (abs(k) > 9999) {
+    //    lcd.print('_____');
+    //  } else {
+    //    if (abs(k) < 1000) {
+    //      lcd.print(' ');
+    //    }
+    //    if (abs(k) < 100) {
+    //      lcd.print(' ');
+    //    }
+    //    if (abs(k) < 10) {
+    //      lcd.print(' ');
+    //    }
+    //    if (k >= 0) {
+    //      lcd.print(' ');
+    //    }
+    //    lcd.print(k);
+    //  }
+  } else if (screen == SCREEN_INPUT_VS_SET) {
+    // Print setpoint
+    lcd.setCursor(0, 0); // set the LCD cursor position
+    lcd.print("S");
+    if (abs(setpoint) < 100) {
+      lcd.print(' ');
+    }
+    if (abs(setpoint) < 10) {
+      lcd.print(' ');
+    }
+    if (setpoint >= 0) {
+      lcd.print(' ');
+    }
+    lcd.print(setpoint);
+    // Print delta
+    // lcd.setCursor(0, 0); // set the LCD cursor position
+    if (abs(delta) < 100) {
+      lcd.print(' ');
+    }
+    if (abs(delta) < 10) {
+      lcd.print(' ');
+    }
+    if (delta >= 0) {
+      lcd.print(' ');
+    }
+    lcd.print(delta);
+    lcd.print("D");
+    // Print input
+    lcd.setCursor(0, 1); // set the LCD cursor position
+    lcd.print("I");
+    if (abs(input) < 100) {
+      lcd.print(' ');
+    }
+    if (abs(input) < 10) {
+      lcd.print(' ');
+    }
+    if (input >= 0) {
+      lcd.print(' ');
+    }
+    lcd.print(input);
+    // Print tolerance
+    // lcd.setCursor(0, 0); // set the LCD cursor position
+    if (abs(tolerance) < 100) {
+      lcd.print(' ');
+    }
+    if (abs(tolerance) < 10) {
+      lcd.print(' ');
+    }
+    if (tolerance >= 0) {
+      lcd.print(' ');
+    }
+    lcd.print(tolerance);
+    lcd.print("T");
+  } else if (screen == SCREEN_RELAY_COUNTS) {
+    // Print relay counters
+    lcd.setCursor(0, 0); // set the LCD cursor position
+    lcd.print("Relay    up:");
+    if (abs(upCount) < 100) {
+      lcd.print(' ');
+    }
+    if (abs(upCount) < 10) {
+      lcd.print(' ');
+    }
+    if (upCount >= 0) {
+      lcd.print(' ');
+    }
+    lcd.print(upCount);
+
+    lcd.setCursor(0, 1); // set the LCD cursor position
+    lcd.print("Count    dn:");
+    if (abs(dnCount) < 100) {
+      lcd.print(' ');
+    }
+    if (abs(dnCount) < 10) {
+      lcd.print(' ');
+    }
+    if (dnCount >= 0) {
+      lcd.print(' ');
+    }
+    lcd.print(dnCount);
+  } else if (screen == SCREEN_USE_ANGLE_SENS) {
+    lcd.setCursor(0, 0); // set the LCD cursor position
+    lcd.print("Use AngleSensor:");
+    lcd.setCursor(0, 1); // set the LCD cursor position
+    if (useAngleSensor == 1) {
+      lcd.print("1 Blue      ");
+    } else if (useAngleSensor == 2) {
+      lcd.print("2 Brown     ");
+    } else if (useAngleSensor == 3) {
+      lcd.print("Require Both");
+    } else {
+      lcd.print("Unknown     ");
+    }
+  } else if (screen == SCREEN_SET_PARK_ANGLE) {
+    lcd.setCursor(0, 0); // set the LCD cursor position
+    lcd.print("Park Angle:");
+    lcd.setCursor(0, 1); // set the LCD cursor position
+    lcd.print(userSetpoints[0]);
+    // TODO single/double digit
+  } else {
+    lcd.setCursor(0, 0); // set the LCD cursor position
+    lcd.print("Unknown screen.");
+  }
+}
+
+// Update 7-segment display
+void update7SegDisplay() {
+  uint16_t uiOut = angleToUIChar(controlEnable ? setpoint : input);
+  if (raising) {
+    uiOut |= UI_RDP;
+  }
+  if (lowering) {
+    uiOut |= UI_LDP;
+  }
+  if (!controlEnable) { // Manual mode
+    uiOut |= UI_LDP | UI_RDP; // Both ON solid during manual mode.
+  }
+  seg7.set(uiOut);
+
+  // If control error, flash 7-segment UI
+  if ((errorFlags & controlErrors) != 0) {
+    if (++uiFlashCounter%2 == 0) {
+      seg7.displayOn();
+    } else {
+      seg7.displayOff();
+    }
+  }
+}
+
+char angleToChar(double angle) {
+  for (int i = 0; i < angleToCharThresholdLen; ++i) {
+    if (angle > angleToCharThreshold[i]) {
+      return angleChars[i];
+    }
+  }
+  return ' ';
+}
+
+uint16_t angleToUIChar(double angle) {
+  for (int i = 0; i < angleToCharThresholdLen; ++i) {
+    if (angle > angleToCharThreshold[i]) {
+      return angleUIChars[i];
+    }
+  }
+  return UICHAR__;
+}
+
+// Handle dash buttons
+void handleDashButtons() {
   uint8_t dashBtns = digitalRead(BTN_DN_PIN) | (digitalRead(BTN_UP_PIN) << 1);
   if (dashBtns != dashBtnState || (dashBtns != 0 && millis() - dashBtnLastTime > dashBtnRepeatDelay)) {
     // A change
@@ -623,8 +888,10 @@ void loop() {
       }
     }
   }
+}
 
-  // Handle keypad buttons
+// Handle keypad buttons (LCD panel)
+void handleKeypadButtons() {
   KEY key = readKeyInput();
 
   // TODO: Only update on key change?
@@ -668,264 +935,6 @@ void loop() {
       // Should never happen.
     }
   }
-
-  // LCD clear screen is slow, so only do so when something changes
-  if (errorFlags != lastErrorFlags) {
-    lastErrorFlags = errorFlags;
-    // A change
-    redraw = true;
-
-    // Log error changes? Count? Sum time in error? Display message?
-    // TODO: Should only call moveStop() if err flag not already set?
-    logError();
-  }
-
-  if (redraw || millis() - tepTimer > 200) {
-    if (redraw == true) {
-      lcd.clear();
-    }
-    redraw = false;
-    tepTimer = millis();
-
-    // Update 7-segment display
-    uint16_t uiOut = angleToUIChar(controlEnable ? setpoint : input);
-    if (raising) {
-      uiOut |= UI_RDP;
-    }
-    if (lowering) {
-      uiOut |= UI_LDP;
-    }
-    if (!controlEnable) { // Manual mode
-      uiOut |= UI_LDP | UI_RDP; // Both ON solid during manual mode.
-    }
-    seg7.set(uiOut);
-
-    // If control error, flash 7-segment UI
-    if ((errorFlags & controlErrors) != 0) {
-      if (++uiFlashCounter%2 == 0) {
-        seg7.displayOn();
-      } else {
-        seg7.displayOff();
-      }
-    }
-
-    // seg7.set(UICHAR_4 | UISIG_ERROR);
-    // seg7.set(UICHAR_F | UISIG_ACTIVE);
-    // seg7.set(UICHAR_0 | UISIG_MANUAL);
-
-    // TODO Disable keypad input on error screen.
-
-    if (screen == SCREEN_PROD_ERR) {
-      lcd.setCursor(0, 0); // set the LCD cursor position
-      if (errorFlags == 0) {
-          lcd.print("PowerWedge v");
-          lcd.print(modelVersion);
-          lcd.print('.');
-          lcd.print(firmwareVersion);
-          lcd.setCursor(3, 1); // set the LCD cursor position
-          lcd.print("No Errors");
-      } else {
-        // One error per line, can only show two.
-        if ((errorFlags & ERR_BAD_SENSOR1) > 0) {
-          lcd.print("Err Bad Sensor 1"); lcd.setCursor(0, 1); // next line
-        }
-        if ((errorFlags & ERR_BAD_SENSOR2) > 0) {
-          lcd.print("Err Bad Sensor 2"); lcd.setCursor(0, 1); // next line
-        }
-        if ((errorFlags & ERR_RELAY_CYCLING) > 0) {
-          lcd.print("ErrRelay Cycling"); lcd.setCursor(0, 1); // next line
-        }
-        if ((errorFlags & ERR_RELAY_ON_LONG) > 0) {
-          lcd.print("Relay On TooLong"); lcd.setCursor(0, 1); // next line
-        }
-        if ((errorFlags & ERR_SENSOR_DIVERG) > 0) {
-          lcd.print("Err SensDiverged"); lcd.setCursor(0, 1); // next line
-        }
-      }
-    } else if (screen == SCREEN_ANGLE_READ) {
-      // Print V1, angle1
-      lcd.setCursor(0, 0); // set the LCD cursor position
-      lcd.print(v1);
-      lcd.print("V ");
-
-      if (abs(angle1) < 10) {
-        lcd.print(' ');
-      }
-      if (angle1 >= 0) {
-        lcd.print(' ');
-      }
-      lcd.print(angle1);
-
-
-      // Print V2, angle2
-      lcd.setCursor(0, 1); // set the LCD cursor position
-      lcd.print(v2);
-      lcd.print("V ");
-
-      if (abs(angle2) < 10) {
-        lcd.print(' ');
-      }
-      if (angle2 >= 0) {
-        lcd.print(' ');
-      }
-      lcd.print(angle2);
-
-      // Print selected angle sensors
-      lcd.setCursor(15, 0); // set the LCD cursor position
-      if (useAngleSensor == 1 || useAngleSensor == 3) {
-        lcd.print('*');
-      } else {
-        lcd.print(' ');
-      }
-      lcd.setCursor(15, 1); // set the LCD cursor position
-      if (useAngleSensor == 2 || useAngleSensor == 3) {
-        lcd.print('*');
-      } else {
-        lcd.print(' ');
-      }
-
-      //  int k = analogRead(A0);            // read the analog in value:
-      //  // Print k
-      //  lcd.setCursor(7, 1); // set the LCD cursor position
-      //  if (abs(k) > 9999) {
-      //    lcd.print('_____');
-      //  } else {
-      //    if (abs(k) < 1000) {
-      //      lcd.print(' ');
-      //    }
-      //    if (abs(k) < 100) {
-      //      lcd.print(' ');
-      //    }
-      //    if (abs(k) < 10) {
-      //      lcd.print(' ');
-      //    }
-      //    if (k >= 0) {
-      //      lcd.print(' ');
-      //    }
-      //    lcd.print(k);
-      //  }
-    } else if (screen == SCREEN_INPUT_VS_SET) {
-      // Print setpoint
-      lcd.setCursor(0, 0); // set the LCD cursor position
-      lcd.print("S");
-      if (abs(setpoint) < 100) {
-        lcd.print(' ');
-      }
-      if (abs(setpoint) < 10) {
-        lcd.print(' ');
-      }
-      if (setpoint >= 0) {
-       lcd.print(' ');
-      }
-      lcd.print(setpoint);
-      // Print delta
-      // lcd.setCursor(0, 0); // set the LCD cursor position
-      if (abs(delta) < 100) {
-        lcd.print(' ');
-      }
-      if (abs(delta) < 10) {
-        lcd.print(' ');
-      }
-      if (delta >= 0) {
-       lcd.print(' ');
-      }
-      lcd.print(delta);
-      lcd.print("D");
-      // Print input
-      lcd.setCursor(0, 1); // set the LCD cursor position
-      lcd.print("I");
-      if (abs(input) < 100) {
-        lcd.print(' ');
-      }
-      if (abs(input) < 10) {
-        lcd.print(' ');
-      }
-      if (input >= 0) {
-       lcd.print(' ');
-      }
-      lcd.print(input);
-      // Print tolerance
-      // lcd.setCursor(0, 0); // set the LCD cursor position
-      if (abs(tolerance) < 100) {
-        lcd.print(' ');
-      }
-      if (abs(tolerance) < 10) {
-        lcd.print(' ');
-      }
-      if (tolerance >= 0) {
-       lcd.print(' ');
-      }
-      lcd.print(tolerance);
-      lcd.print("T");
-    } else if (screen == SCREEN_RELAY_COUNTS) {
-      // Print relay counters
-      lcd.setCursor(0, 0); // set the LCD cursor position
-      lcd.print("Relay    up:");
-      if (abs(upCount) < 100) {
-        lcd.print(' ');
-      }
-      if (abs(upCount) < 10) {
-        lcd.print(' ');
-      }
-      if (upCount >= 0) {
-        lcd.print(' ');
-      }
-      lcd.print(upCount);
-
-      lcd.setCursor(0, 1); // set the LCD cursor position
-      lcd.print("Count    dn:");
-      if (abs(dnCount) < 100) {
-        lcd.print(' ');
-      }
-      if (abs(dnCount) < 10) {
-        lcd.print(' ');
-      }
-      if (dnCount >= 0) {
-        lcd.print(' ');
-      }
-      lcd.print(dnCount);
-    } else if (screen == SCREEN_USE_ANGLE_SENS) {
-      lcd.setCursor(0, 0); // set the LCD cursor position
-      lcd.print("Use AngleSensor:");
-      lcd.setCursor(0, 1); // set the LCD cursor position
-      if (useAngleSensor == 1) {
-        lcd.print("1 Blue      ");
-      } else if (useAngleSensor == 2) {
-        lcd.print("2 Brown     ");
-      } else if (useAngleSensor == 3) {
-        lcd.print("Require Both");
-      } else {
-        lcd.print("Unknown     ");
-      }
-    } else if (screen == SCREEN_SET_PARK_ANGLE) {
-      lcd.setCursor(0, 0); // set the LCD cursor position
-      lcd.print("Park Angle:");
-      lcd.setCursor(0, 1); // set the LCD cursor position
-      lcd.print(userSetpoints[0]);
-      // TODO single/double digit
-    } else {
-      lcd.setCursor(0, 0); // set the LCD cursor position
-      lcd.print("Unknown screen.");
-    }
-  }
-}
-
-char angleToChar(double angle) {
-  for (int i = 0; i < angleToCharThresholdLen; ++i) {
-    if (angle > angleToCharThreshold[i]) {
-      return angleChars[i];
-    }
-  }
-  return ' ';
-}
-
-uint16_t angleToUIChar(double angle) {
-  for (int i = 0; i < angleToCharThresholdLen; ++i) {
-    if (angle > angleToCharThreshold[i]) {
-      return angleUIChars[i];
-    }
-  }
-  return UICHAR__;
 }
 
 // Read keypad and handle button debounce
