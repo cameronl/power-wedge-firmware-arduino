@@ -458,6 +458,57 @@ void overDriveLow() {
   moveStop();
 }
 
+// TODO How strong should the reset be?
+
+// Reset config (stored in EEPROM) to defaults
+void resetConfigToDefaults() {
+  overdriveTimeUp = 1000;
+  overdriveTimeDn = 1000;
+  onChangeOverdriveTimeUp();
+  onChangeOverdriveTimeDn();
+
+  setOverdrive(false);
+
+  useAngleSensor = 1;
+  onAngleSensorChange();
+
+  // Park angle
+  userSetpoints[0] = 80.0;
+  onChangeParkAngle();
+
+  userSetpointIndex = 0; // Home is probably best place to start if uninitialized.
+  goToUserSetpoint(userSetpointIndex);
+}
+
+// Load config (from EEPROM)
+void loadConfig() {
+  overdriveTimeUp = EEPROM.read(overdriveTimeUpEepromAddr) * 100;
+  overdriveTimeDn = EEPROM.read(overdriveTimeDnEepromAddr) * 100;
+
+  overdrive = EEPROM.read(overdriveEepromAddr);
+
+  // Use angle sensor
+  useAngleSensor = EEPROM.read(useAngleSensorEepromAddr);
+  if (useAngleSensor > 3 || useAngleSensor < 1) {
+    useAngleSensor = 1; // Default to sensor 1
+  }
+  onAngleSensorChange();
+
+  // Park angle
+  userSetpoints[0] = (double) EEPROM.read(parkAngleEepromAddr);
+  onChangeParkAngle();
+
+  // What if MCU reboots? Don't want setpoint to jump. Store/load it from flash.
+  // Currently storing index in list of user setpoints -- NOT the actual angle/voltage.
+  userSetpointIndex = EEPROM.read(setpointEepromAddr);
+  if (userSetpointIndex > userSetpointLen - 1) {
+    userSetpointIndex = 0; // Home is probably best place to start if uninitialized.
+  }
+
+  //setpoint = 3.500; // V
+  goToUserSetpoint(userSetpointIndex);
+}
+
 void setup() {
 #ifdef ENABLE_SERIAL_LOG
   // Serial.begin(9600);
@@ -498,35 +549,7 @@ void setup() {
   }
 #endif
 
-  //
-  // Load config
-  //
-
-  overdriveTimeUp = EEPROM.read(overdriveTimeUpEepromAddr) * 100;
-  overdriveTimeDn = EEPROM.read(overdriveTimeDnEepromAddr) * 100;
-
-  overdrive = EEPROM.read(overdriveEepromAddr);
-
-  // Use angle sensor
-  useAngleSensor = EEPROM.read(useAngleSensorEepromAddr);
-  if (useAngleSensor > 3 || useAngleSensor < 1) {
-    useAngleSensor = 1; // Default to sensor 1
-  }
-  onAngleSensorChange();
-
-  // Park angle
-  userSetpoints[0] = (double) EEPROM.read(parkAngleEepromAddr);
-  onChangeParkAngle();
-
-  // What if MCU reboots? Don't want setpoint to jump. Store/load it from flash.
-  // Currently storing index in list of user setpoints -- NOT the actual angle/voltage.
-  userSetpointIndex = EEPROM.read(setpointEepromAddr);
-  if (userSetpointIndex > userSetpointLen - 1) {
-    userSetpointIndex = 0; // Home is probably best place to start if uninitialized.
-  }
-
-  //setpoint = 3.500; // V
-  goToUserSetpoint(userSetpointIndex);
+  loadConfig();
 }
 
 void loop() {
