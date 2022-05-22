@@ -196,11 +196,11 @@ void onChangeOverdriveTimeUp() {
   log.print(", ");
 #endif
 
-  if (overdriveTimeUp > overdriveTimeMax) {
+  if (overdriveTimeUp > (int) overdriveTimeMax) {
     overdriveTimeUp = 0; // Roll over
   }
   if (overdriveTimeUp < 0) {
-    overdriveTimeUp = overdriveTimeMax; // Roll over
+    overdriveTimeUp = (int) overdriveTimeMax; // Roll over
   }
 
 #ifdef log
@@ -237,11 +237,11 @@ void onChangeOverdriveTimeDn() {
   log.print(", ");
 #endif
 
-  if (overdriveTimeDn > overdriveTimeMax) {
+  if (overdriveTimeDn > (int) overdriveTimeMax) {
     overdriveTimeDn = 0; // Roll over
   }
   if (overdriveTimeDn < 0) {
-    overdriveTimeDn = overdriveTimeMax; // Roll over
+    overdriveTimeDn = (int) overdriveTimeMax; // Roll over
   }
 
 #ifdef log
