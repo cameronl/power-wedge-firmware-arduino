@@ -50,7 +50,7 @@ const uint16_t angleUIChars[] = {
 // ----------------------------------------------------------
 
 #define modelVersion 1
-#define firmwareVersion 2
+#define firmwareVersion 3
 
 // #define ENABLE_SERIAL_LOG
 // #define ENABLE_SDCARD
