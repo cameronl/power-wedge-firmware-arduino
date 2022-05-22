@@ -157,6 +157,19 @@ int overdriveTimeUp;                // milliseconds
 int overdriveTimeDn;                // milliseconds
 const uint16_t overdriveTimeMax = 10000; // milliseconds
 
+// Stop timer properties -- call moveStop() after duration
+bool stopTimer = false;             // Stop timer is in progress. Set to false to cancel.
+unsigned long stopTimerBegin;       // When the timer started (based on millis())
+uint16_t stopTimerDuration;         // Desired duration of drive
+
+// Stop after a specific duration without using delay()
+// The main loop will call moveStop() after the duration has passed.
+void stopAfter(uint16_t durationMs) {
+  stopTimer = true;
+  stopTimerBegin = millis();
+  stopTimerDuration = durationMs;
+}
+
 // Set overdrive mode (true/false) and store in EEPROM
 void setOverdrive(bool newVal = true) {
   overdrive = newVal;
@@ -406,6 +419,7 @@ void moveRaise() {
   ++upCount;
   logMoveStart();
   lastRelayStart = millis();
+  stopTimer = false; // Cancel
 }
 
 // Initiate movement down
@@ -418,6 +432,7 @@ void moveLower() {
   ++dnCount;
   logMoveStart();
   lastRelayStart = millis();
+  stopTimer = false; // Cancel
 }
 
 void moveStop() {
@@ -430,6 +445,7 @@ void moveStop() {
     lastRelayStop = millis();
     logMoveStop();
   }
+  stopTimer = false; // Cancel
 }
 
 /// Drive off the readable end of angle sensor.
@@ -439,10 +455,7 @@ void overDriveHigh() {
   offMapLowRequested = false;
   setOverdrive(true);
   moveRaise();
-  // TODO Use something other than delay(), display can be updated, input handled while moving
-  update7SegDisplay();
-  delay(overdriveTimeUp);
-  moveStop();
+  stopAfter(overdriveTimeUp);
 }
 
 /// Drive off the readable end of angle sensor.
@@ -452,10 +465,7 @@ void overDriveLow() {
   offMapLowRequested = false;
   setOverdrive(true);
   moveLower();
-  // TODO Use something other than delay(), display can be updated, input handled while moving
-  update7SegDisplay();
-  delay(overdriveTimeDn);
-  moveStop();
+  stopAfter(overdriveTimeDn);
 }
 
 // TODO How strong should the reset be?
@@ -657,6 +667,12 @@ void loop() {
   if (controlEnable != !manualEnable) {
     // A change
     controlEnable = !manualEnable;
+    moveStop();
+  }
+
+  // The completion of stopAfter()
+  if (stopTimer && (millis() - stopTimerBegin > stopTimerDuration)) {
+    stopTimer = false;
     moveStop();
   }
 
