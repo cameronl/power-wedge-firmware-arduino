@@ -25,12 +25,11 @@ const double angleToCharThreshold[] = {
 };
 /// For printing to LCD
 const char angleChars[] = {
-  'F', 'E', 'd', 'c', 'b', 'A', '9', '8', '7', '6', '5', '4', '3', '2', '1', '0'
+  'P', 'd', 'c', 'b', 'A', '9', '8', '7', '6', '5', '4', '3', '2', '1', 'L', '0'
 };
 /// Outputs for UI 7-segment display
 const uint16_t angleUIChars[] = {
-  UICHAR_F,
-  UICHAR_E,
+  UICHAR_P,
   UICHAR_D,
   UICHAR_C,
   UICHAR_B,
@@ -44,6 +43,7 @@ const uint16_t angleUIChars[] = {
   UICHAR_3,
   UICHAR_2,
   UICHAR_1,
+  UICHAR_L,
   UICHAR_0
 };
 

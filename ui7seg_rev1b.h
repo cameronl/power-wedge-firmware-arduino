@@ -7,6 +7,8 @@
 // Character to segment outputs
 
 // ############# ::1L_EFA____BGCDR2
+#define UICHAR_L 0b0001100000000100 // Character L
+#define UICHAR_P 0b0001110000110000 // Character P
 #define UICHAR_F 0b0001110000010000 // Character F
 #define UICHAR_E 0b0001110000010100 // Character E
 #define UICHAR_D 0b0001000000111100 // Character d
