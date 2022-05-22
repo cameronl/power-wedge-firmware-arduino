@@ -53,7 +53,7 @@ const uint16_t angleUIChars[] = {
 #define firmwareVersion 2
 
 // #define ENABLE_SERIAL_LOG
-#define ENABLE_SDCARD
+// #define ENABLE_SDCARD
 
 // TODO: Store and reference double volts or int millivolts?
 
