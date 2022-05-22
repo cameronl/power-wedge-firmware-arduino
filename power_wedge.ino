@@ -1,8 +1,6 @@
 /**
  * Power wedge control using 1602 LCD keypad shield on Arduino Uno.
  * 
- * If control enabled,  UP/DOWN keys iterate user set points.
- * If control disabled, UP/DOWN keys are manual relay movement.
  */
 
 #include "board/uno_1602_lcd_keypad_shield_rev1.h"
@@ -23,7 +21,7 @@ double userSetpoints[] = {
 // Convert wedge angle to single character for display
 const int angleToCharThresholdLen = 16;
 const double angleToCharThreshold[] = {
-  80, 70, 60, 50, 40, 30, 20, 12, 8, 4.5, 1.5, -1.5, -6, -9, -11, -90
+  80, 70, 60, 50, 40, 30, 20, 12, 8, 4.5, 1.5, -1.5, -6, -9, -20, -90
 };
 /// For printing to LCD
 const char angleChars[] = {
@@ -663,6 +661,8 @@ void loop() {
   }
 
   // See if control is enabled?
+  // TODO Debounce this?
+  // TODO Mode 2. Automatic, waiting for user input. (On boot or return from manual mode).
   bool manualEnable = digitalRead(EN_MANUAL_PIN) == HIGH;
   if (controlEnable != !manualEnable) {
     // A change

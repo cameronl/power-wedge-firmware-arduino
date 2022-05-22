@@ -1,0 +1,13 @@
+
+
+Add go-off-the-map ability for both high and low ends of the range.
+- Use state machine? states:
+  SENSOR_GOOD: Position is within reable sensor
+  OFF_MAP_HIGH_REQUESTED_BUT_WERE_NOT_AT_END_OF_SENSOR: Need to drive normally until we reach maxSetpoint
+  OFF_MAP_HIGH_REQUESTED_AND_AT_MAX_SETPOINT:
+  DRIVING_OFF_MAP_HIGH_FOR_SPECIFIC_TIME
+  OFF_THE_MAP_HIGH
+
+TODO Overdrive is not saved in EEPROM so it will perform the overdrive on each reboot if the wedge is in overdrive position.
+     Because go to saved setpoint is called on boot and the current setpoint includes an overdrive.
+

@@ -134,3 +134,41 @@ TODO Log on control inhibiting errors, all errors
 1. Control board PCB fixes (bodge wires, added resistors)
 1. 7-segment display UI PCB fixes (led 1&2 position, header position, thinner if flip board)
 1. Fit into smaller enclosure
+
+----
+
+Don't move on power on. OnStartAutomaticMode (esp. return from manual mode):
+1. Don't start moving until up/down button pushed once.
+2. Choose nearest setpoint instead of last saved.
+   - Now don't need to store current setpoint in EEPROM.
+
+Light both decimal points for Manual mode.
+Flash display for error.
+
+Modes/States:
+1. Manual
+2. Automatic, waiting for user input. (On boot or return from manual mode).
+3. Automatic, mcu control following a setpoint.
+4. Automatic, error inhibiting control.
+
+Another control strategy could be to go to mode 2 after any move + settling time.
+
+
+What do the chars on LED 7-segment mean vs angle or setpoint?
+A: They are always a converted angle range.
+Option they could be setpoint 1, 2, 3, 4, 5, 6, 7, P.
+
+Straight to park, straight to lift buttons, etc.
+
+Update 7-seg UI only on UI change?
+
+Config settings for relay error thresholds.
+
+Debounce manual mode pin input? Pull up/down? Other protection? Terminal block or switch?
+
+Turn off overdrive if angle sensor input in normal readable range?
+Turn off overdrive in manual mode?
+
+What happens if parked in overdrive and we come out of manual mode?
+
+Add reset config to factory defaults screen/button
