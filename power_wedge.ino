@@ -101,7 +101,7 @@ unsigned long debounceDelay = 50;   // the debounce time; increase if the output
 uint8_t uiFlashCounter = 0;         // Used in flashing the 7-segment display
 
 bool redraw = true;                 // should redraw the lcd screen
-const uint8_t screens = 6;
+const uint8_t screens = 8;
 uint8_t screen = 0;
 #define SCREEN_PROD_ERR 0
 #define SCREEN_ANGLE_READ 1
@@ -109,6 +109,8 @@ uint8_t screen = 0;
 #define SCREEN_RELAY_COUNTS 3
 #define SCREEN_USE_ANGLE_SENS 4
 #define SCREEN_SET_PARK_ANGLE 5
+#define SCREEN_SET_OVERDRIVE_TIME_UP 6
+#define SCREEN_SET_OVERDRIVE_TIME_DN 7
 
 // Possible error flags
 #define ERR_BAD_SENSOR1   0b10000000 // Angle sensor out of valid range. Check sensor connection, power.
@@ -149,26 +151,113 @@ double sensorsConvergeTolerance;
 int userSetpointIndex;              // Current position in list of user setpoints
 uint8_t useAngleSensor;             // Which angle sensor to use?
 
+// Time to drive beyond end of angle sensor when "going off the map"
+// to extend the range of the power wedge beyond what the sensor can read
+int overdriveTimeUp;                // milliseconds
+int overdriveTimeDn;                // milliseconds
+
 // Set overdrive mode (true/false) and store in EEPROM
 void setOverdrive(bool newVal = true) {
   overdrive = newVal;
   EEPROM.update(overdriveEepromAddr, newVal);
 }
 
+// Increment overdrive up time
+void incOverdriveTimeUp() {
+  overdriveTimeUp += 100; // Tenths of second step
+  onChangeOverdriveTimeUp();
+}
+
+// Decrement overdrive up time
+void decOverdriveTimeUp() {
+  overdriveTimeUp -= 100; // Tenths of second step
+  onChangeOverdriveTimeUp();
+}
+
+// Call when there is a change to overdriveTimeUp
+void onChangeOverdriveTimeUp() {
+#ifdef log
+  log.print("NEW,overdriveTimeUp, ");
+  log.print(overdriveTimeUp);
+  log.print(", ");
+#endif
+
+  if (overdriveTimeUp > 25000) {
+    overdriveTimeUp = 25000; // Clamp to max
+  }
+  if (overdriveTimeUp < 0) {
+    overdriveTimeUp = 0; // Clamp to min
+  }
+
+#ifdef log
+  log.println(overdriveTimeUp);
+#endif
+#ifdef ENABLE_SDCARD
+  if (logFile) {
+    logFile.flush();
+  }
+#endif
+
+  // Save this config choice in EEPROM
+  // Stored in tenths of second to fit in one byte
+  EEPROM.update(overdriveTimeUpEepromAddr, overdriveTimeUp / 100);
+}
+
+// Increment overdrive down time
+void incOverdriveTimeDn() {
+  overdriveTimeDn += 100; // Tenths of second step
+  onChangeOverdriveTimeDn();
+}
+
+// Decrement overdrive down time
+void decOverdriveTimeDn() {
+  overdriveTimeDn -= 100; // Tenths of second step
+  onChangeOverdriveTimeDn();
+}
+
+// Call when there is a change to overdriveTimeDn
+void onChangeOverdriveTimeDn() {
+#ifdef log
+  log.print("NEW,overdriveTimeDn, ");
+  log.print(overdriveTimeDn);
+  log.print(", ");
+#endif
+
+  if (overdriveTimeDn > 25000) {
+    overdriveTimeDn = 25000; // Clamp to max
+  }
+  if (overdriveTimeDn < 0) {
+    overdriveTimeDn = 0; // Clamp to min
+  }
+
+#ifdef log
+  log.println(overdriveTimeDn);
+#endif
+#ifdef ENABLE_SDCARD
+  if (logFile) {
+    logFile.flush();
+  }
+#endif
+
+  // Save this config choice in EEPROM
+  // Stored in tenths of second to fit in one byte
+  EEPROM.update(overdriveTimeDnEepromAddr, overdriveTimeDn / 100);
+}
+
 // Increment park angle
-void upAngleParkAngle() {
+void incParkAngle() {
   userSetpoints[0]++;
-  onParkAngleChange();
+  onChangeParkAngle();
 }
 
 // Decrement park angle
-void downAngleParkAngle() {
+void decParkAngle() {
   userSetpoints[0]--;
-  onParkAngleChange();
+  onChangeParkAngle();
 }
 
 // Call when there is a change to park angle.
-void onParkAngleChange() {
+void onChangeParkAngle() {
 #ifdef log
   log.print("NEW,parkAngle, ");
   log.print(userSetpoints[0]);
@@ -349,7 +438,9 @@ void overDriveHigh() {
   offMapLowRequested = false;
   setOverdrive(true);
   moveRaise();
-  delay(overdriveUpTime);
+  // TODO Use something other than delay(), display can be updated, input handled while moving
+  update7SegDisplay();
+  delay(overdriveTimeUp);
   moveStop();
 }
 
@@ -360,7 +451,9 @@ void overDriveLow() {
   offMapLowRequested = false;
   setOverdrive(true);
   moveLower();
-  delay(overdriveDnTime);
+  // TODO Use something other than delay(), display can be updated, input handled while moving
+  update7SegDisplay();
+  delay(overdriveTimeDn);
   moveStop();
 }
 
@@ -408,6 +501,9 @@ void setup() {
   // Load config
   //
 
+  overdriveTimeUp = EEPROM.read(overdriveTimeUpEepromAddr) * 100;
+  overdriveTimeDn = EEPROM.read(overdriveTimeDnEepromAddr) * 100;
+
   overdrive = EEPROM.read(overdriveEepromAddr);
 
   // Use angle sensor
@@ -419,7 +515,7 @@ void setup() {
 
   // Park angle
   userSetpoints[0] = (double) EEPROM.read(parkAngleEepromAddr);
-  onParkAngleChange();
+  onChangeParkAngle();
 
   // What if MCU reboots? Don't want setpoint to jump. Store/load it from flash.
   // Currently storing index in list of user setpoints -- NOT the actual angle/voltage.
@@ -814,6 +910,32 @@ void updateLcd() {
     lcd.setCursor(0, 1); // set the LCD cursor position
     lcd.print(userSetpoints[0]);
     // TODO single/double digit
+  } else if (screen == SCREEN_SET_OVERDRIVE_TIME_UP) {
+    lcd.setCursor(0, 0);
+    lcd.print("OverdriveTime Up");
+    lcd.setCursor(0, 1);
+    double val = overdriveTimeUp / 1000.0;
+    // if (abs(val) < 100) {
+    //   lcd.print(' ');
+    // }
+    if (abs(val) < 10) {
+      lcd.print(' ');
+    }
+    lcd.print(val);
+    lcd.print(" s");
+  } else if (screen == SCREEN_SET_OVERDRIVE_TIME_DN) {
+    lcd.setCursor(0, 0);
+    lcd.print("OverdriveTime Dn");
+    lcd.setCursor(0, 1);
+    double val = overdriveTimeDn / 1000.0;
+    // if (abs(val) < 100) {
+    //   lcd.print(' ');
+    // }
+    if (abs(val) < 10) {
+      lcd.print(' ');
+    }
+    lcd.print(val);
+    lcd.print(" s");
   } else {
     lcd.setCursor(0, 0); // set the LCD cursor position
     lcd.print("Unknown screen.");
@@ -916,13 +1038,21 @@ void handleKeypadButtons() {
       if (screen == SCREEN_USE_ANGLE_SENS) {
         nextAngleSensor();
       } else if (screen == SCREEN_SET_PARK_ANGLE) {
-        downAngleParkAngle();
+        decParkAngle();
+      } else if (screen == SCREEN_SET_OVERDRIVE_TIME_UP) {
+        decOverdriveTimeUp();
+      } else if (screen == SCREEN_SET_OVERDRIVE_TIME_DN) {
+        decOverdriveTimeDn();
       }
     } else if (key == KEY_UP) {
       if (screen == SCREEN_USE_ANGLE_SENS) {
         prevAngleSensor();
       } else if (screen == SCREEN_SET_PARK_ANGLE) {
-        upAngleParkAngle();
+        incParkAngle();
+      } else if (screen == SCREEN_SET_OVERDRIVE_TIME_UP) {
+        incOverdriveTimeUp();
+      } else if (screen == SCREEN_SET_OVERDRIVE_TIME_DN) {
+        incOverdriveTimeDn();
       }
     } else if (key == KEY_RIGHT) {
       ++screen;

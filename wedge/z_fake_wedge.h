@@ -60,10 +60,4 @@ const double vMaxValidSensor1 = 3.10; // maximum valid sensor1 voltage
 const double vMinValidSensor2 = 0.20; // minimum valid sensor2 voltage
 const double vMaxValidSensor2 = 3.10; // maximum valid sensor2 voltage
 
-// Time to drive beyond end of angle sensor when "going off the map"
-// to extend the range of the power wedge beyond what the sensor can read
-const unsigned long overdriveUpTime  = 1000; // milliseconds
-const unsigned long overdriveDnTime  = 1000; // milliseconds
-// const unsigned long overdriveTimeout = 5000; // milliseconds
-
 #endif

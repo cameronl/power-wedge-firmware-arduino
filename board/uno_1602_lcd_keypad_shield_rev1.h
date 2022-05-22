@@ -38,5 +38,7 @@
 #define useAngleSensorEepromAddr 998
 #define parkAngleEepromAddr 997
 #define overdriveEepromAddr 996
+#define overdriveTimeUpEepromAddr 995
+#define overdriveTimeDnEepromAddr 994
 
 #endif
