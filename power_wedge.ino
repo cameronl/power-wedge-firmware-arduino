@@ -155,6 +155,7 @@ uint8_t useAngleSensor;             // Which angle sensor to use?
 // to extend the range of the power wedge beyond what the sensor can read
 int overdriveTimeUp;                // milliseconds
 int overdriveTimeDn;                // milliseconds
+const uint16_t overdriveTimeMax = 10000; // milliseconds
 
 // Set overdrive mode (true/false) and store in EEPROM
 void setOverdrive(bool newVal = true) {
@@ -182,11 +183,11 @@ void onChangeOverdriveTimeUp() {
   log.print(", ");
 #endif
 
-  if (overdriveTimeUp > 25000) {
-    overdriveTimeUp = 25000; // Clamp to max
+  if (overdriveTimeUp > overdriveTimeMax) {
+    overdriveTimeUp = 0; // Roll over
   }
   if (overdriveTimeUp < 0) {
-    overdriveTimeUp = 0; // Clamp to min
+    overdriveTimeUp = overdriveTimeMax; // Roll over
   }
 
 #ifdef log
@@ -223,11 +224,11 @@ void onChangeOverdriveTimeDn() {
   log.print(", ");
 #endif
 
-  if (overdriveTimeDn > 25000) {
-    overdriveTimeDn = 25000; // Clamp to max
+  if (overdriveTimeDn > overdriveTimeMax) {
+    overdriveTimeDn = 0; // Roll over
   }
   if (overdriveTimeDn < 0) {
-    overdriveTimeDn = 0; // Clamp to min
+    overdriveTimeDn = overdriveTimeMax; // Roll over
   }
 
 #ifdef log
